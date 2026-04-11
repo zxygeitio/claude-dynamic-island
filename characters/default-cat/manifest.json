@@ -1,0 +1,48 @@
+{
+  "name": "Pixel Cat",
+  "author": "Claude Dynamic Island",
+  "version": "1.0.0",
+  "description": "A cute pixel cat companion for your Dynamic Island",
+  "spritesheet": "spritesheet.png",
+  "frameWidth": 16,
+  "frameHeight": 16,
+  "animations": {
+    "idle": {
+      "row": 0,
+      "frameCount": 8,
+      "frameRate": 4,
+      "loop": true,
+      "pingPong": true
+    },
+    "working": {
+      "row": 0,
+      "frameCount": 8,
+      "frameRate": 6,
+      "loop": true,
+      "pingPong": true
+    },
+    "celebrating": {
+      "row": 2,
+      "frameCount": 6,
+      "frameRate": 10,
+      "loop": false,
+      "nextState": "idle"
+    },
+    "sleeping": {
+      "row": 3,
+      "frameCount": 4,
+      "frameRate": 2,
+      "loop": true,
+      "pingPong": true
+    },
+    "confused": {
+      "row": 4,
+      "frameCount": 6,
+      "frameRate": 6,
+      "loop": false,
+      "nextState": "idle"
+    }
+  },
+  "defaultState": "idle",
+  "scale": 2
+}

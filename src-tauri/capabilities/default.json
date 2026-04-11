@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicegui/tauri-v2/main/tooling/cli/schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": ["island"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-background-color",
+    "core:webview:allow-set-webview-background-color",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-position",
+    "core:window:allow-set-size",
+    "core:window:allow-start-dragging",
+    "shell:allow-open",
+    "store:default",
+    "fs:default"
+  ]
+}

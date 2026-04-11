@@ -1,0 +1,55 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicegui/tauri-v2/main/tooling/cli/schema.json",
+  "productName": "Claude Dynamic Island",
+  "version": "1.0.0",
+  "identifier": "com.claude-dynamic-island",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "island",
+        "title": "Claude Dynamic Island",
+        "width": 364,
+        "height": 52,
+        "transparent": true,
+        "decorations": false,
+        "visible": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "resizable": false,
+        "center": false,
+        "x": 0,
+        "y": 0,
+        "shadow": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "publisher": "zxy",
+    "copyright": "Copyright (c) 2026 zxy",
+    "category": "DeveloperTool",
+    "shortDescription": "Windows 11 Dynamic Island companion for Claude Code.",
+    "longDescription": "Claude Dynamic Island brings Claude Code approvals, notifications, and hook diagnostics into a compact Windows 11 Dynamic Island style companion with tray access and direct in-island actions.",
+    "resources": [
+      "../characters"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
