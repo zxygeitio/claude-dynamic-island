@@ -7,6 +7,7 @@ import { StatusPanel } from "./status/status-panel";
 import { SettingsStore } from "./settings/settings-store";
 import type { TransitionType } from "./character/renderer";
 import { invoke } from "@tauri-apps/api/core";
+import type { RuntimeSettings } from "./types";
 
 async function init() {
   try {
@@ -28,6 +29,7 @@ async function init() {
     const settingsStore = new SettingsStore();
     await settingsStore.load();
     const settings = settingsStore.get();
+    let settingsPanelVisible = false;
     const spriteLoader = new SpriteLoader();
     const stateMachine = new CharacterStateMachine();
     const renderer = new CharacterRenderer(
@@ -62,6 +64,12 @@ async function init() {
 
     if ("__TAURI_INTERNALS__" in window) {
       try {
+        await invoke<RuntimeSettings>("update_runtime_settings", {
+          payload: {
+            autoApproveTools: settings.autoApproveTools,
+            approvalTimeoutSeconds: settings.approvalTimeoutSeconds,
+          },
+        });
         const startupCheck = await invoke<{ ok: boolean; shouldDisplay: boolean; message: string }>(
           "run_startup_self_check"
         );
@@ -193,6 +201,85 @@ async function init() {
       } catch (error) {
         console.error("Failed to close Claude Dynamic Island:", error);
       }
+    });
+
+    const settingsPanel = document.getElementById("settings-panel");
+    const settingsButton = document.getElementById("settings-button");
+    const settingsTimeoutInput = document.getElementById("settings-timeout") as HTMLInputElement | null;
+    const settingsAutoApproveInput = document.getElementById("settings-auto-approve") as HTMLInputElement | null;
+    const settingsSaveButton = document.getElementById("settings-save");
+
+    const applySettingsPanelState = () => {
+      settingsPanel?.classList.toggle("visible", settingsPanelVisible);
+    };
+
+    const fillSettingsPanel = async () => {
+      let runtimeSettings: RuntimeSettings = {
+        autoApproveTools: settingsStore.get().autoApproveTools,
+        approvalTimeoutSeconds: settingsStore.get().approvalTimeoutSeconds,
+      };
+
+      if ("__TAURI_INTERNALS__" in window) {
+        try {
+          runtimeSettings = await invoke<RuntimeSettings>("get_runtime_settings");
+        } catch (error) {
+          console.error("Failed to load runtime settings:", error);
+        }
+      }
+
+      if (settingsTimeoutInput) {
+        settingsTimeoutInput.value = String(runtimeSettings.approvalTimeoutSeconds);
+      }
+      if (settingsAutoApproveInput) {
+        settingsAutoApproveInput.value = runtimeSettings.autoApproveTools.join(", ");
+      }
+    };
+
+    settingsButton?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      settingsPanelVisible = !settingsPanelVisible;
+      if (settingsPanelVisible) {
+        await fillSettingsPanel();
+      }
+      applySettingsPanelState();
+    });
+
+    settingsSaveButton?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const timeout = Math.max(1, Number(settingsTimeoutInput?.value || "30"));
+      const autoApproveTools = (settingsAutoApproveInput?.value || "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+      await settingsStore.update({
+        approvalTimeoutSeconds: timeout,
+        autoApproveTools,
+      });
+
+      if ("__TAURI_INTERNALS__" in window) {
+        try {
+          await invoke<RuntimeSettings>("update_runtime_settings", {
+            payload: {
+              approvalTimeoutSeconds: timeout,
+              autoApproveTools,
+            },
+          });
+        } catch (error) {
+          console.error("Failed to update runtime settings:", error);
+        }
+      }
+
+      settingsPanelVisible = false;
+      applySettingsPanelState();
+      eventBus.emit({
+        type: "startup-check",
+        ok: true,
+        message: "Runtime settings updated",
+      });
     });
 
     // Also click on pill body to toggle

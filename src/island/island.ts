@@ -194,6 +194,8 @@ export class IslandController {
       target.tagName === "BUTTON" ||
       target.closest(".approval-buttons") ||
       target.closest(".selection-panel") ||
+      target.closest(".settings-panel") ||
+      target.closest(".settings-button") ||
       target.closest(".quit-button") ||
       target.closest(".island-expand-hint")
     );

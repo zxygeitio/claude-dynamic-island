@@ -23,11 +23,31 @@
               <span class="session-id" id="session-id"></span>
               <div class="status-header-actions">
                 <span class="status-badge" id="status-badge">Idle</span>
+                <button class="settings-button" id="settings-button" type="button" aria-label="Open settings">
+                  <svg viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M8 3.2a4.8 4.8 0 100 9.6 4.8 4.8 0 000-9.6zm0 2a2.8 2.8 0 110 5.6 2.8 2.8 0 010-5.6z" />
+                    <path d="M8 0.8l.82 1.65 1.8.25.88 1.6 1.79.31-.27 1.82 1.28 1.3-1.28 1.3.27 1.82-1.79.31-.88 1.6-1.8.25L8 15.2l-.82-1.65-1.8-.25-.88-1.6-1.79-.31.27-1.82-1.28-1.3 1.28-1.3-.27-1.82 1.79-.31.88-1.6 1.8-.25L8 .8z" />
+                  </svg>
+                </button>
                 <button class="quit-button" id="quit-button" type="button" aria-label="Close Claude Dynamic Island">
                   <svg viewBox="0 0 16 16" aria-hidden="true">
                     <path d="M4 4L12 12M12 4L4 12" />
                   </svg>
                 </button>
+              </div>
+            </div>
+            <div class="settings-panel" id="settings-panel">
+              <div class="settings-panel-title">Runtime Settings</div>
+              <label class="settings-field">
+                <span class="settings-label">Approval timeout</span>
+                <input class="settings-input" id="settings-timeout" type="number" min="1" max="600" />
+              </label>
+              <label class="settings-field">
+                <span class="settings-label">Auto-approve tools</span>
+                <input class="settings-input" id="settings-auto-approve" type="text" placeholder="Read, Grep, Glob" />
+              </label>
+              <div class="settings-actions">
+                <button class="settings-save" id="settings-save" type="button">Save</button>
               </div>
             </div>
             <div class="status-details">

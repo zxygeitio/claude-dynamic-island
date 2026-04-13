@@ -30,6 +30,13 @@ struct RuntimeContext {
     server_port: u16,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeSettingsPayload {
+    auto_approve_tools: Vec<String>,
+    approval_timeout_seconds: u64,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct StartupCheckResult {
@@ -56,6 +63,32 @@ fn snap_island_window(window: WebviewWindow) -> Result<(), String> {
 #[tauri::command]
 fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
+}
+
+#[tauri::command]
+async fn get_runtime_settings(
+    runtime_settings: tauri::State<'_, Arc<Mutex<config::settings::AppSettings>>>,
+) -> Result<RuntimeSettingsPayload, String> {
+    let settings = runtime_settings.lock().await;
+    Ok(RuntimeSettingsPayload {
+        auto_approve_tools: settings.auto_approve_tools.clone(),
+        approval_timeout_seconds: settings.approval_timeout_seconds,
+    })
+}
+
+#[tauri::command]
+async fn update_runtime_settings(
+    runtime_settings: tauri::State<'_, Arc<Mutex<config::settings::AppSettings>>>,
+    payload: RuntimeSettingsPayload,
+) -> Result<RuntimeSettingsPayload, String> {
+    let mut settings = runtime_settings.lock().await;
+    settings.auto_approve_tools = payload.auto_approve_tools;
+    settings.approval_timeout_seconds = payload.approval_timeout_seconds.max(1);
+
+    Ok(RuntimeSettingsPayload {
+        auto_approve_tools: settings.auto_approve_tools.clone(),
+        approval_timeout_seconds: settings.approval_timeout_seconds,
+    })
 }
 
 #[tauri::command]
@@ -263,8 +296,7 @@ fn build_tray<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
 pub fn run() {
     let settings = config::settings::AppSettings::default();
     let server_port = resolve_available_server_port(settings.server_port);
-    let approval_timeout_secs = settings.approval_timeout_seconds;
-    let auto_approve_tools = settings.auto_approve_tools.clone();
+    let runtime_settings = Arc::new(Mutex::new(settings.clone()));
     let approval_gate = Arc::new(Mutex::new(approval::gate::ApprovalGate::new()));
     let selection_gate = Arc::new(Mutex::new(selection::gate::SelectionGate::new()));
 
@@ -281,6 +313,7 @@ pub fn run() {
         }))
         .manage(approval::gate::ApprovalGateState(approval_gate.clone()))
         .manage(selection::gate::SelectionGateState(selection_gate.clone()))
+        .manage(runtime_settings.clone())
         .manage(RuntimeContext { server_port })
         .setup(move |app| {
             let window = app.get_webview_window("island").expect("Failed to get island window");
@@ -306,8 +339,7 @@ pub fn run() {
                     approval_gate,
                     selection_gate,
                     server_port,
-                    approval_timeout_secs,
-                    auto_approve_tools,
+                    runtime_settings,
                 )
                 .await
                 {
@@ -323,6 +355,8 @@ pub fn run() {
             snap_island_window,
             sync_island_window,
             quit_app,
+            get_runtime_settings,
+            update_runtime_settings,
             run_startup_self_check,
         ])
         .run(tauri::generate_context!())

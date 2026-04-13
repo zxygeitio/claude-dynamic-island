@@ -11,6 +11,7 @@ use tauri::{Emitter, Manager};
 use uuid::Uuid;
 
 use crate::approval::gate::ApprovalGate;
+use crate::config::settings::AppSettings;
 use crate::selection::gate::SelectionGate;
 use crate::server::models::*;
 
@@ -20,8 +21,7 @@ pub fn create_router(
     app_handle: tauri::AppHandle,
     gate: Arc<Mutex<ApprovalGate>>,
     selection_gate: Arc<Mutex<SelectionGate>>,
-    approval_timeout_secs: u64,
-    auto_approve_tools: Vec<String>,
+    runtime_settings: Arc<Mutex<AppSettings>>,
 ) -> Router {
     Router::new()
         .route("/hooks/pre-tool-use", post(pre_tool_use_handler))
@@ -33,8 +33,7 @@ pub fn create_router(
             app_handle,
             gate,
             selection_gate,
-            approval_timeout_secs,
-            auto_approve_tools,
+            runtime_settings,
         })
 }
 
@@ -43,14 +42,17 @@ pub struct AppState {
     pub app_handle: tauri::AppHandle,
     pub gate: Arc<Mutex<ApprovalGate>>,
     pub selection_gate: Arc<Mutex<SelectionGate>>,
-    pub approval_timeout_secs: u64,
-    pub auto_approve_tools: Vec<String>,
+    pub runtime_settings: Arc<Mutex<AppSettings>>,
 }
 
 async fn pre_tool_use_handler(
     State(state): State<AppState>,
     Json(event): Json<HookEvent>,
 ) -> Result<(StatusCode, Json<HookHttpResponse>), StatusCode> {
+    let runtime_settings = {
+        let settings = state.runtime_settings.lock().await;
+        settings.clone()
+    };
     let approval_id = Uuid::new_v4().to_string();
 
     let tool_name = event.tool_name.clone().unwrap_or_default();
@@ -63,14 +65,14 @@ async fn pre_tool_use_handler(
         tool_input: tool_input.clone(),
         session_id: session_id.clone(),
         requires_approval: false,
-        approval_timeout_seconds: state.approval_timeout_secs,
+        approval_timeout_seconds: runtime_settings.approval_timeout_seconds,
     };
 
     if tool_name.eq_ignore_ascii_case("AskUserQuestion") {
         return handle_ask_user_question(state, approval_id, payload).await;
     }
 
-    if state
+    if runtime_settings
         .auto_approve_tools
         .iter()
         .any(|allowed| allowed.eq_ignore_ascii_case(&tool_name))
@@ -139,7 +141,8 @@ async fn pre_tool_use_handler(
     }
 
     // Wait for user resolution without holding the approval gate lock.
-    let result = ApprovalGate::wait_for_resolution(rx, state.approval_timeout_secs).await;
+    let result =
+        ApprovalGate::wait_for_resolution(rx, runtime_settings.approval_timeout_seconds).await;
 
     if result.is_none() {
         let mut gate = state.gate.lock().await;
@@ -203,7 +206,13 @@ async fn handle_ask_user_question(
         ));
     }
 
-    let selection_timeout_secs = state.approval_timeout_secs.max(SELECTION_TIMEOUT_SECS);
+    let runtime_settings = {
+        let settings = state.runtime_settings.lock().await;
+        settings.clone()
+    };
+    let selection_timeout_secs = runtime_settings
+        .approval_timeout_seconds
+        .max(SELECTION_TIMEOUT_SECS);
     let result = SelectionGate::wait_for_resolution(rx, selection_timeout_secs).await;
 
     if result.is_none() {

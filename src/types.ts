@@ -73,3 +73,8 @@ export interface AppSettings {
   serverPort: number;
   autoStart: boolean;
 }
+
+export interface RuntimeSettings {
+  autoApproveTools: string[];
+  approvalTimeoutSeconds: number;
+}

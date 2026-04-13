@@ -4,6 +4,7 @@ pub mod router;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use crate::approval::gate::ApprovalGate;
+use crate::config::settings::AppSettings;
 use crate::selection::gate::SelectionGate;
 
 pub async fn start_server(
@@ -11,15 +12,13 @@ pub async fn start_server(
     gate: Arc<Mutex<ApprovalGate>>,
     selection_gate: Arc<Mutex<SelectionGate>>,
     port: u16,
-    approval_timeout_secs: u64,
-    auto_approve_tools: Vec<String>,
+    runtime_settings: Arc<Mutex<AppSettings>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let router = router::create_router(
         app_handle,
         gate,
         selection_gate,
-        approval_timeout_secs,
-        auto_approve_tools,
+        runtime_settings,
     );
 
     let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
