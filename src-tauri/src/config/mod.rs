@@ -21,6 +21,8 @@ pub struct HooksConfig {
     pub pre_tool_use: Vec<HookMatcher>,
     #[serde(rename = "PostToolUse")]
     pub post_tool_use: Vec<HookMatcher>,
+    #[serde(rename = "PostToolUseFailure")]
+    pub post_tool_use_failure: Vec<HookMatcher>,
     #[serde(rename = "Notification")]
     pub notification: Vec<HookMatcher>,
     #[serde(rename = "Stop")]
@@ -79,6 +81,17 @@ pub fn generate_hook_config(port: u16) -> HookConfig {
                     allowed_env_vars: None,
                 }],
             }],
+            post_tool_use_failure: vec![HookMatcher {
+                matcher: String::new(),
+                hooks: vec![HookEntry {
+                    hook_type: "http".to_string(),
+                    command: None,
+                    url: Some(format!("{}/hooks/post-tool-use-failure", base_url)),
+                    timeout: None,
+                    headers: None,
+                    allowed_env_vars: None,
+                }],
+            }],
             notification: vec![HookMatcher {
                 matcher: String::new(),
                 hooks: vec![HookEntry {
@@ -128,6 +141,10 @@ pub fn verify_claude_hook_config(
     let expected = [
         ("PreToolUse", format!("{}/hooks/pre-tool-use", hook_base_url(port))),
         ("PostToolUse", format!("{}/hooks/post-tool-use", hook_base_url(port))),
+        (
+            "PostToolUseFailure",
+            format!("{}/hooks/post-tool-use-failure", hook_base_url(port)),
+        ),
         ("Notification", format!("{}/hooks/notification", hook_base_url(port))),
         ("Stop", format!("{}/hooks/stop", hook_base_url(port))),
     ];
@@ -208,6 +225,12 @@ fn write_hook_config(
         "PostToolUse",
         generated.hooks.post_tool_use,
         &format!("{}/hooks/post-tool-use", hook_base_url(port)),
+    )?;
+    merge_hook_entries(
+        hooks_object,
+        "PostToolUseFailure",
+        generated.hooks.post_tool_use_failure,
+        &format!("{}/hooks/post-tool-use-failure", hook_base_url(port)),
     )?;
     merge_hook_entries(
         hooks_object,

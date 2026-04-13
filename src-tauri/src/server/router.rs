@@ -26,6 +26,7 @@ pub fn create_router(
     Router::new()
         .route("/hooks/pre-tool-use", post(pre_tool_use_handler))
         .route("/hooks/post-tool-use", post(post_tool_use_handler))
+        .route("/hooks/post-tool-use-failure", post(post_tool_use_failure_handler))
         .route("/hooks/notification", post(notification_handler))
         .route("/hooks/stop", post(stop_handler))
         .with_state(AppState {
@@ -62,6 +63,7 @@ async fn pre_tool_use_handler(
         tool_input: tool_input.clone(),
         session_id: session_id.clone(),
         requires_approval: false,
+        approval_timeout_seconds: state.approval_timeout_secs,
     };
 
     if tool_name.eq_ignore_ascii_case("AskUserQuestion") {
@@ -258,22 +260,44 @@ async fn post_tool_use_handler(
         .and_then(|value| serde_json::to_string(value).ok())
         .unwrap_or_default();
 
-    let is_error = tool_output.lines().any(|line| {
-        let normalized = line.trim().to_ascii_lowercase();
-        normalized.starts_with("error:")
-            || normalized.starts_with("failed:")
-            || normalized.starts_with("fatal:")
-    });
+    let payload = PostToolUsePayload {
+        tool_name,
+        tool_input,
+        tool_output,
+        is_error: false,
+        hook_event_name: "PostToolUse".to_string(),
+    };
+
+    if let Err(e) = emit_to_island(&state.app_handle, "post-tool-use", &payload) {
+        eprintln!("Failed to emit post-tool-use event: {}", e);
+    }
+
+    StatusCode::OK
+}
+
+async fn post_tool_use_failure_handler(
+    State(state): State<AppState>,
+    Json(event): Json<HookEvent>,
+) -> StatusCode {
+    let tool_name = event.tool_name.clone().unwrap_or_default();
+    let tool_input = event.tool_input.clone().unwrap_or(serde_json::Value::Null);
+    let tool_output = event
+        .tool_response
+        .as_ref()
+        .and_then(|value| serde_json::to_string(value).ok())
+        .or_else(|| event.message.clone())
+        .unwrap_or_else(|| "Tool execution failed".to_string());
 
     let payload = PostToolUsePayload {
         tool_name,
         tool_input,
         tool_output,
-        is_error,
+        is_error: true,
+        hook_event_name: "PostToolUseFailure".to_string(),
     };
 
     if let Err(e) = emit_to_island(&state.app_handle, "post-tool-use", &payload) {
-        eprintln!("Failed to emit post-tool-use event: {}", e);
+        eprintln!("Failed to emit post-tool-use-failure event: {}", e);
     }
 
     StatusCode::OK

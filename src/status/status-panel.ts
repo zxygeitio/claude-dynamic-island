@@ -50,14 +50,20 @@ export class StatusPanel {
             this.showSelection(event.approvalId, event.toolInput);
           } else if (event.requiresApproval) {
             this.hideSelection();
-            this.showApproval(event.approvalId, event.toolName, event.toolInput, event.sessionId);
+            this.showApproval(
+              event.approvalId,
+              event.toolName,
+              event.toolInput,
+              event.sessionId,
+              event.approvalTimeoutSeconds
+            );
           } else {
             this.hideSelection();
             this.hideApproval();
           }
           break;
         case "post-tool-use":
-          this.updateLastHookEvent(`PostToolUse: ${event.toolName}`);
+          this.updateLastHookEvent(`${event.hookEventName}: ${event.toolName}`);
           this.hideSelection();
           this.hideApproval();
           this.addActionToHistory(event.toolName, event.toolInput, event.isError);
@@ -84,7 +90,7 @@ export class StatusPanel {
         case "approval-requested":
           this.updateLastHookEvent(`Approval: ${event.toolName}`);
           this.hideSelection();
-          this.showApproval(event.approvalId, event.toolName, event.toolInput, "");
+          this.showApproval(event.approvalId, event.toolName, event.toolInput, "", 30);
           break;
         case "approval-resolved":
           this.updateLastHookEvent(event.approved ? "Approval: allow" : "Approval: deny");
@@ -536,7 +542,8 @@ export class StatusPanel {
     approvalId: string,
     toolName: string,
     toolInput: Record<string, unknown>,
-    sessionId: string
+    sessionId: string,
+    approvalTimeoutSeconds: number
   ): void {
     if (this.approvalTimer) {
       clearInterval(this.approvalTimer);
@@ -558,7 +565,7 @@ export class StatusPanel {
       buttonsEl.classList.add("visible");
     }
 
-    this.approvalTimeLeft = 30;
+    this.approvalTimeLeft = Math.max(1, approvalTimeoutSeconds);
     this.updateApprovalTimer();
     this.approvalTimer = setInterval(() => {
       this.approvalTimeLeft -= 1;

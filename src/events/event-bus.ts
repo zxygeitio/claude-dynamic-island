@@ -1,8 +1,8 @@
 import { listen } from "@tauri-apps/api/event";
 
 export type IslandEvent =
-  | { type: "pre-tool-use"; toolName: string; toolInput: Record<string, unknown>; approvalId: string; sessionId: string; requiresApproval: boolean }
-  | { type: "post-tool-use"; toolName: string; toolInput: Record<string, unknown>; toolOutput: string; isError: boolean }
+  | { type: "pre-tool-use"; toolName: string; toolInput: Record<string, unknown>; approvalId: string; sessionId: string; requiresApproval: boolean; approvalTimeoutSeconds: number }
+  | { type: "post-tool-use"; toolName: string; toolInput: Record<string, unknown>; toolOutput: string; isError: boolean; hookEventName: string }
   | { type: "notification"; message: string }
   | { type: "stop"; stopReason: string; sessionId: string }
   | { type: "approval-requested"; approvalId: string; toolName: string; toolInput: Record<string, unknown> }
@@ -35,6 +35,7 @@ export class EventBus {
         tool_input: Record<string, unknown>;
         session_id: string;
         requires_approval: boolean;
+        approval_timeout_seconds: number;
       };
       this.emit({
         type: "pre-tool-use",
@@ -43,6 +44,7 @@ export class EventBus {
         approvalId: payload.approval_id,
         sessionId: payload.session_id,
         requiresApproval: payload.requires_approval,
+        approvalTimeoutSeconds: payload.approval_timeout_seconds,
       });
     });
 
@@ -52,6 +54,7 @@ export class EventBus {
         tool_input: Record<string, unknown>;
         tool_output: string;
         is_error: boolean;
+        hook_event_name: string;
       };
       this.emit({
         type: "post-tool-use",
@@ -59,6 +62,7 @@ export class EventBus {
         toolInput: payload.tool_input,
         toolOutput: payload.tool_output,
         isError: payload.is_error,
+        hookEventName: payload.hook_event_name,
       });
     });
 

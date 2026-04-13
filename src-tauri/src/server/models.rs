@@ -60,6 +60,7 @@ pub struct PreToolUsePayload {
     pub tool_input: serde_json::Value,
     pub session_id: String,
     pub requires_approval: bool,
+    pub approval_timeout_seconds: u64,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -68,6 +69,7 @@ pub struct PostToolUsePayload {
     pub tool_input: serde_json::Value,
     pub tool_output: String,
     pub is_error: bool,
+    pub hook_event_name: String,
 }
 
 #[derive(Debug, Serialize, Clone)]
