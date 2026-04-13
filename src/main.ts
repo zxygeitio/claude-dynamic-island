@@ -77,29 +77,6 @@ async function init() {
       }
     }
 
-    if ("__TAURI_INTERNALS__" in window) {
-      try {
-        await invoke<RuntimeSettings>("update_runtime_settings", {
-          payload: {
-            autoApproveTools: settings.autoApproveTools,
-            approvalTimeoutSeconds: settings.approvalTimeoutSeconds,
-          },
-        });
-        const startupCheck = await invoke<{ ok: boolean; shouldDisplay: boolean; message: string }>(
-          "run_startup_self_check"
-        );
-        if (startupCheck.shouldDisplay) {
-          eventBus.emit({
-            type: "startup-check",
-            ok: startupCheck.ok,
-            message: startupCheck.message,
-          });
-        }
-      } catch (error) {
-        console.error("Failed to run startup hook self-check:", error);
-      }
-    }
-
     // Connect state machine to renderer
     stateMachine.onStateChange((state, transition) => {
       renderer.playAnimation(state, transition as TransitionType);
@@ -180,6 +157,7 @@ async function init() {
           break;
         case "startup-check":
           clearCollapseTimer();
+          updateHooksStatus(event.ok, event.message);
           island.expand();
           if (event.ok) {
             stateMachine.transition("celebrating", "jump");
@@ -223,11 +201,72 @@ async function init() {
     const settingsCharacterSelect = document.getElementById("settings-character") as HTMLSelectElement | null;
     const settingsTimeoutInput = document.getElementById("settings-timeout") as HTMLInputElement | null;
     const settingsAutoApproveInput = document.getElementById("settings-auto-approve") as HTMLInputElement | null;
+    const settingsHooksStatus = document.getElementById("settings-hooks-status");
+    const settingsRecheckButton = document.getElementById("settings-recheck");
     const settingsSaveButton = document.getElementById("settings-save");
 
     const applySettingsPanelState = () => {
       settingsPanel?.classList.toggle("visible", settingsPanelVisible);
     };
+
+    const updateHooksStatus = (ok: boolean, message: string) => {
+      if (!settingsHooksStatus) {
+        return;
+      }
+
+      settingsHooksStatus.textContent = message;
+      settingsHooksStatus.dataset.state = ok ? "ok" : "error";
+    };
+
+    const runHooksSelfCheck = async (showSuccess = true) => {
+      if (!("__TAURI_INTERNALS__" in window)) {
+        updateHooksStatus(true, "Browser preview mode");
+        return;
+      }
+
+      settingsRecheckButton?.setAttribute("disabled", "true");
+
+      try {
+        const startupCheck = await invoke<{ ok: boolean; shouldDisplay: boolean; message: string }>(
+          "run_startup_self_check"
+        );
+        updateHooksStatus(startupCheck.ok, startupCheck.message);
+        if (showSuccess || !startupCheck.ok || startupCheck.shouldDisplay) {
+          eventBus.emit({
+            type: "startup-check",
+            ok: startupCheck.ok,
+            message: startupCheck.message,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to run startup hook self-check:", error);
+        const message = "Failed to run Claude hook self-check";
+        updateHooksStatus(false, message);
+        eventBus.emit({
+          type: "startup-check",
+          ok: false,
+          message,
+        });
+      } finally {
+        settingsRecheckButton?.removeAttribute("disabled");
+      }
+    };
+
+    if ("__TAURI_INTERNALS__" in window) {
+      try {
+        await invoke<RuntimeSettings>("update_runtime_settings", {
+          payload: {
+            autoApproveTools: settings.autoApproveTools,
+            approvalTimeoutSeconds: settings.approvalTimeoutSeconds,
+          },
+        });
+        await runHooksSelfCheck(false);
+      } catch (error) {
+        console.error("Failed to run startup hook self-check:", error);
+      }
+    } else {
+      updateHooksStatus(true, "Browser preview mode");
+    }
 
     const fillSettingsPanel = async () => {
       let characterOptions: CharacterOption[] = [
@@ -326,6 +365,12 @@ async function init() {
         ok: true,
         message: "Runtime settings updated",
       });
+    });
+
+    settingsRecheckButton?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      await runHooksSelfCheck(true);
     });
 
     // Also click on pill body to toggle

@@ -10,7 +10,7 @@ use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     window::Color,
-    AppHandle, LogicalPosition, LogicalSize, Manager, Position, Runtime, Size,
+    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Position, Runtime, Size,
     WebviewWindow,
 };
 use tokio::sync::Mutex;
@@ -24,6 +24,7 @@ const EXPANDED_RADIUS: i32 = 28;
 const TOP_MARGIN: f64 = 0.0;
 const PORT_SEARCH_SPAN: u16 = 24;
 const TRAY_SHOW_ID: &str = "tray-show";
+const TRAY_RECHECK_ID: &str = "tray-recheck";
 const TRAY_EXIT_ID: &str = "tray-exit";
 
 #[derive(Clone)]
@@ -164,13 +165,20 @@ fn run_startup_self_check(
     app: tauri::AppHandle,
     runtime_context: tauri::State<'_, RuntimeContext>,
 ) -> Result<StartupCheckResult, String> {
+    perform_startup_self_check(&app, runtime_context.server_port)
+}
+
+fn perform_startup_self_check<R: Runtime>(
+    app: &AppHandle<R>,
+    server_port: u16,
+) -> Result<StartupCheckResult, String> {
     let version = app.package_info().version.to_string();
     let mut runtime_state = load_runtime_state(&app).unwrap_or_default();
     let should_display = runtime_state.startup_hook_check_version.as_deref() != Some(version.as_str());
 
-    let settings_paths = config::ensure_claude_hook_config(runtime_context.server_port)
+    let settings_paths = config::ensure_claude_hook_config(server_port)
         .map_err(|error| format!("Failed to install Claude hooks: {error}"))?;
-    let verification = config::verify_claude_hook_config(runtime_context.server_port, &settings_paths)
+    let verification = config::verify_claude_hook_config(server_port, &settings_paths)
         .map_err(|error| format!("Failed to verify Claude hooks: {error}"))?;
 
     let ok = verification.missing_entries.is_empty();
@@ -197,6 +205,12 @@ fn run_startup_self_check(
         should_display: should_display || !ok,
         message,
     })
+}
+
+fn emit_startup_check<R: Runtime>(app: &AppHandle<R>, result: &StartupCheckResult) {
+    if let Some(window) = app.get_webview_window("island") {
+        let _ = window.emit("startup-check", result);
+    }
 }
 
 fn sync_island_window_impl(window: &WebviewWindow, expanded: bool) -> Result<(), String> {
@@ -322,6 +336,7 @@ fn show_island_window<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
+#[allow(dead_code)]
 fn build_tray<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
     let show_item = MenuItem::with_id(app, TRAY_SHOW_ID, "显示 Claude Dynamic Island", true, None::<&str>)
         .map_err(|error| error.to_string())?;
@@ -339,6 +354,72 @@ fn build_tray<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
                 TRAY_EXIT_ID => app.exit(0),
                 _ => {}
             }
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button,
+                button_state,
+                ..
+            } = event
+            {
+                if button == MouseButton::Left && button_state == MouseButtonState::Up {
+                    show_island_window(tray.app_handle());
+                }
+            }
+        });
+
+    if let Some(icon) = app.default_window_icon().cloned() {
+        builder = builder.icon(icon);
+    }
+
+    builder.build(app).map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+fn build_runtime_tray<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
+    let show_item = MenuItem::with_id(
+        app,
+        TRAY_SHOW_ID,
+        "Show Claude Dynamic Island",
+        true,
+        None::<&str>,
+    )
+    .map_err(|error| error.to_string())?;
+    let recheck_item = MenuItem::with_id(
+        app,
+        TRAY_RECHECK_ID,
+        "Recheck Claude Hooks",
+        true,
+        None::<&str>,
+    )
+    .map_err(|error| error.to_string())?;
+    let exit_item = MenuItem::with_id(app, TRAY_EXIT_ID, "Exit", true, None::<&str>)
+        .map_err(|error| error.to_string())?;
+    let menu = Menu::with_items(app, &[&show_item, &recheck_item, &exit_item])
+        .map_err(|error| error.to_string())?;
+
+    let mut builder = TrayIconBuilder::with_id("claude-dynamic-island-tray")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .tooltip("Claude Dynamic Island")
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            TRAY_SHOW_ID => show_island_window(app),
+            TRAY_RECHECK_ID => {
+                show_island_window(app);
+                let app_handle = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    let runtime_context = app_handle.state::<RuntimeContext>();
+                    let result = perform_startup_self_check(&app_handle, runtime_context.server_port)
+                        .unwrap_or(StartupCheckResult {
+                            ok: false,
+                            should_display: true,
+                            message: "Failed to verify Claude hooks".to_string(),
+                        });
+                    emit_startup_check(&app_handle, &result);
+                });
+            }
+            TRAY_EXIT_ID => app.exit(0),
+            _ => {}
         })
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
@@ -389,7 +470,7 @@ pub fn run() {
             if let Err(error) = config::ensure_claude_hook_config(server_port) {
                 eprintln!("Failed to install Claude hook config: {error}");
             }
-            if let Err(error) = build_tray(&app.handle()) {
+            if let Err(error) = build_runtime_tray(&app.handle()) {
                 eprintln!("Failed to create tray icon: {error}");
             }
             if let Err(error) = sync_island_window_impl(&window, false) {

@@ -82,5 +82,17 @@ export class EventBus {
         sessionId: payload.session_id,
       });
     });
+
+    await listen("startup-check", (event) => {
+      const payload = event.payload as {
+        ok: boolean;
+        message: string;
+      };
+      this.emit({
+        type: "startup-check",
+        ok: payload.ok,
+        message: payload.message,
+      });
+    });
   }
 }

@@ -841,6 +841,39 @@ body[data-tauri] .settings-button {
   justify-content: flex-end;
 }
 
+.settings-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-status-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.settings-status-text {
+  font-size: 10px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.84);
+  word-break: break-word;
+}
+
+.settings-status-text[data-state="ok"] {
+  color: #8af0c3;
+}
+
+.settings-status-text[data-state="error"] {
+  color: #ff9c93;
+}
+
+.settings-recheck,
 .settings-save {
   border: none;
   border-radius: 999px;
@@ -848,8 +881,25 @@ body[data-tauri] .settings-button {
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.settings-save {
   color: #061d14;
   background: linear-gradient(180deg, #89f3c9 0%, #45cf9f 100%);
+}
+
+.settings-recheck {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.94);
+  background:
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.3), rgba(var(--accent-rgb), 0.16)),
+    rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(var(--accent-rgb), 0.18);
+}
+
+.settings-recheck:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .history-item-empty {
