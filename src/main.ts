@@ -7,7 +7,7 @@ import { StatusPanel } from "./status/status-panel";
 import { SettingsStore } from "./settings/settings-store";
 import type { TransitionType } from "./character/renderer";
 import { invoke } from "@tauri-apps/api/core";
-import type { RuntimeSettings } from "./types";
+import type { CharacterOption, RuntimeSettings } from "./types";
 
 async function init() {
   try {
@@ -37,22 +37,37 @@ async function init() {
     );
     const island = new IslandController();
     new StatusPanel(eventBus, stateMachine);
+    let activeCharacter = settings.selectedCharacter;
+
+    const applyCharacter = async (characterId: string) => {
+      try {
+        const manifest = await spriteLoader.loadManifest(characterId);
+        const spritesheet = await spriteLoader.loadSpritesheet(characterId, manifest);
+        renderer.setSpritesheet(spritesheet, manifest);
+        stateMachine.setManifest(manifest);
+        activeCharacter = characterId;
+        return true;
+      } catch (error) {
+        console.error(`Failed to apply character ${characterId}:`, error);
+        return false;
+      }
+    };
 
     // Start listening for Tauri events from the backend
     await eventBus.listenTauriEvents();
 
     try {
-      const manifest = await spriteLoader.loadManifest(settings.selectedCharacter);
-      const spritesheet = await spriteLoader.loadSpritesheet(settings.selectedCharacter, manifest);
-      renderer.setSpritesheet(spritesheet, manifest);
-      stateMachine.setManifest(manifest);
+      const ok = await applyCharacter(settings.selectedCharacter);
+      if (!ok) {
+        throw new Error("Configured character failed to load");
+      }
     } catch (err) {
       console.error("Failed to load configured character, falling back to default-cat:", err);
       try {
-        const manifest = await spriteLoader.loadManifest("default-cat");
-        const spritesheet = await spriteLoader.loadSpritesheet("default-cat", manifest);
-        renderer.setSpritesheet(spritesheet, manifest);
-        stateMachine.setManifest(manifest);
+        const ok = await applyCharacter("default-cat");
+        if (!ok) {
+          throw new Error("Default character failed to load");
+        }
       } catch (fallbackError) {
         console.error("Failed to load default character:", fallbackError);
         const noteEl = document.getElementById("current-note");
@@ -205,6 +220,7 @@ async function init() {
 
     const settingsPanel = document.getElementById("settings-panel");
     const settingsButton = document.getElementById("settings-button");
+    const settingsCharacterSelect = document.getElementById("settings-character") as HTMLSelectElement | null;
     const settingsTimeoutInput = document.getElementById("settings-timeout") as HTMLInputElement | null;
     const settingsAutoApproveInput = document.getElementById("settings-auto-approve") as HTMLInputElement | null;
     const settingsSaveButton = document.getElementById("settings-save");
@@ -214,6 +230,9 @@ async function init() {
     };
 
     const fillSettingsPanel = async () => {
+      let characterOptions: CharacterOption[] = [
+        { id: "default-cat", name: "Pixel Cat" },
+      ];
       let runtimeSettings: RuntimeSettings = {
         autoApproveTools: settingsStore.get().autoApproveTools,
         approvalTimeoutSeconds: settingsStore.get().approvalTimeoutSeconds,
@@ -222,11 +241,23 @@ async function init() {
       if ("__TAURI_INTERNALS__" in window) {
         try {
           runtimeSettings = await invoke<RuntimeSettings>("get_runtime_settings");
+          characterOptions = await invoke<CharacterOption[]>("list_available_characters");
         } catch (error) {
           console.error("Failed to load runtime settings:", error);
         }
       }
 
+      if (settingsCharacterSelect) {
+        settingsCharacterSelect.replaceChildren(
+          ...characterOptions.map((option) => {
+            const el = document.createElement("option");
+            el.value = option.id;
+            el.textContent = option.name;
+            return el;
+          })
+        );
+        settingsCharacterSelect.value = activeCharacter;
+      }
       if (settingsTimeoutInput) {
         settingsTimeoutInput.value = String(runtimeSettings.approvalTimeoutSeconds);
       }
@@ -254,10 +285,25 @@ async function init() {
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
+      const selectedCharacter = settingsCharacterSelect?.value || activeCharacter;
+
+      const characterChanged = selectedCharacter !== activeCharacter;
+      if (characterChanged) {
+        const applied = await applyCharacter(selectedCharacter);
+        if (!applied) {
+          eventBus.emit({
+            type: "startup-check",
+            ok: false,
+            message: `Failed to load character: ${selectedCharacter}`,
+          });
+          return;
+        }
+      }
 
       await settingsStore.update({
         approvalTimeoutSeconds: timeout,
         autoApproveTools,
+        selectedCharacter,
       });
 
       if ("__TAURI_INTERNALS__" in window) {

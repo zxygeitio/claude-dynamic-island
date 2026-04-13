@@ -827,6 +827,10 @@ body[data-tauri] .settings-button {
   outline: none;
 }
 
+.settings-select {
+  appearance: none;
+}
+
 .settings-input:focus {
   border-color: rgba(var(--accent-rgb), 0.4);
   box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.22);

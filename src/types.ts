@@ -78,3 +78,8 @@ export interface RuntimeSettings {
   autoApproveTools: string[];
   approvalTimeoutSeconds: number;
 }
+
+export interface CharacterOption {
+  id: string;
+  name: string;
+}

@@ -1,5 +1,6 @@
 mod server;
 mod approval;
+mod character;
 mod config;
 mod selection;
 
@@ -35,6 +36,13 @@ struct RuntimeContext {
 struct RuntimeSettingsPayload {
     auto_approve_tools: Vec<String>,
     approval_timeout_seconds: u64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CharacterOption {
+    id: String,
+    name: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -89,6 +97,66 @@ async fn update_runtime_settings(
         auto_approve_tools: settings.auto_approve_tools.clone(),
         approval_timeout_seconds: settings.approval_timeout_seconds,
     })
+}
+
+#[tauri::command]
+fn list_available_characters(app: tauri::AppHandle) -> Result<Vec<CharacterOption>, String> {
+    let mut options = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+
+    let workspace_dir = std::env::current_dir()
+        .map_err(|error| error.to_string())?
+        .join("characters");
+    let resource_dir = app
+        .path()
+        .resource_dir()
+        .map_err(|error| error.to_string())?
+        .join("characters");
+
+    for root in [workspace_dir, resource_dir] {
+        if !root.exists() {
+            continue;
+        }
+
+        let manifests = character::loader::scan_characters_dir(&root);
+        for manifest in manifests {
+            let guessed_id = fs::read_dir(&root)
+                .ok()
+                .into_iter()
+                .flat_map(|entries| entries.flatten())
+                .find_map(|entry| {
+                    let path = entry.path();
+                    let manifest_json = path.join("manifest.json");
+                    if !manifest_json.exists() {
+                        return None;
+                    }
+                    let content = fs::read_to_string(&manifest_json).ok()?;
+                    let parsed = serde_json::from_str::<character::CharacterManifest>(&content).ok()?;
+                    if parsed.name == manifest.name {
+                        Some(entry.file_name().to_string_lossy().to_string())
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_else(|| manifest.name.to_lowercase().replace(' ', "-"));
+
+            if seen.insert(guessed_id.clone()) {
+                options.push(CharacterOption {
+                    id: guessed_id,
+                    name: manifest.name,
+                });
+            }
+        }
+    }
+
+    if options.is_empty() {
+        options.push(CharacterOption {
+            id: "default-cat".to_string(),
+            name: "Pixel Cat".to_string(),
+        });
+    }
+
+    Ok(options)
 }
 
 #[tauri::command]
@@ -357,6 +425,7 @@ pub fn run() {
             quit_app,
             get_runtime_settings,
             update_runtime_settings,
+            list_available_characters,
             run_startup_self_check,
         ])
         .run(tauri::generate_context!())
