@@ -1,5 +1,6 @@
 import type { IslandStatus } from "../types";
 import { invoke } from "@tauri-apps/api/core";
+import { isTauri } from "../utils/env";
 
 export class IslandController {
   private static readonly SNAP_THRESHOLD = 88;
@@ -202,7 +203,7 @@ export class IslandController {
   }
 
   private detectTauriWindow(): void {
-    this.isTauriWindow = "__TAURI_INTERNALS__" in window;
+    this.isTauriWindow = isTauri();
   }
 
   private snapDomIslandIfNeeded(): void {
@@ -227,9 +228,7 @@ export class IslandController {
 
   private async snapNativeWindowIfNeeded(): Promise<void> {
     try {
-      const [{ getCurrentWindow }] = await Promise.all([
-        import("@tauri-apps/api/window"),
-      ]);
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
       const appWindow = getCurrentWindow();
       const position = await appWindow.outerPosition();
       const scaleFactor = await appWindow.scaleFactor();

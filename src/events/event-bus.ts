@@ -28,71 +28,73 @@ export class EventBus {
   }
 
   async listenTauriEvents(): Promise<void> {
-    await listen("pre-tool-use", (event) => {
-      const payload = event.payload as {
-        approval_id: string;
-        tool_name: string;
-        tool_input: Record<string, unknown>;
-        session_id: string;
-        requires_approval: boolean;
-        approval_timeout_seconds: number;
-      };
-      this.emit({
-        type: "pre-tool-use",
-        toolName: payload.tool_name,
-        toolInput: payload.tool_input,
-        approvalId: payload.approval_id,
-        sessionId: payload.session_id,
-        requiresApproval: payload.requires_approval,
-        approvalTimeoutSeconds: payload.approval_timeout_seconds,
-      });
-    });
+    await Promise.all([
+      listen("pre-tool-use", (event) => {
+        const payload = event.payload as {
+          approval_id: string;
+          tool_name: string;
+          tool_input: Record<string, unknown>;
+          session_id: string;
+          requires_approval: boolean;
+          approval_timeout_seconds: number;
+        };
+        this.emit({
+          type: "pre-tool-use",
+          toolName: payload.tool_name,
+          toolInput: payload.tool_input,
+          approvalId: payload.approval_id,
+          sessionId: payload.session_id,
+          requiresApproval: payload.requires_approval,
+          approvalTimeoutSeconds: payload.approval_timeout_seconds,
+        });
+      }),
 
-    await listen("post-tool-use", (event) => {
-      const payload = event.payload as {
-        tool_name: string;
-        tool_input: Record<string, unknown>;
-        tool_output: string;
-        is_error: boolean;
-        hook_event_name: string;
-      };
-      this.emit({
-        type: "post-tool-use",
-        toolName: payload.tool_name,
-        toolInput: payload.tool_input,
-        toolOutput: payload.tool_output,
-        isError: payload.is_error,
-        hookEventName: payload.hook_event_name,
-      });
-    });
+      listen("post-tool-use", (event) => {
+        const payload = event.payload as {
+          tool_name: string;
+          tool_input: Record<string, unknown>;
+          tool_output: string;
+          is_error: boolean;
+          hook_event_name: string;
+        };
+        this.emit({
+          type: "post-tool-use",
+          toolName: payload.tool_name,
+          toolInput: payload.tool_input,
+          toolOutput: payload.tool_output,
+          isError: payload.is_error,
+          hookEventName: payload.hook_event_name,
+        });
+      }),
 
-    await listen("notification", (event) => {
-      const payload = event.payload as { message: string };
-      this.emit({ type: "notification", message: payload.message });
-    });
+      listen("notification", (event) => {
+        const payload = event.payload as { message: string };
+        this.emit({ type: "notification", message: payload.message });
+      }),
 
-    await listen("stop", (event) => {
-      const payload = event.payload as {
-        stop_reason: string;
-        session_id: string;
-      };
-      this.emit({
-        type: "stop",
-        stopReason: payload.stop_reason,
-        sessionId: payload.session_id,
-      });
-    });
+      listen("stop", (event) => {
+        const payload = event.payload as {
+          stop_reason: string;
+          session_id: string;
+        };
+        this.emit({
+          type: "stop",
+          stopReason: payload.stop_reason,
+          sessionId: payload.session_id,
+        });
+      }),
 
-    await listen("startup-check", (event) => {
-      const payload = event.payload as {
-        ok: boolean;
-        message: string;
-      };
-      this.emit({
-        type: "startup-check",
-        ok: payload.ok,
-        message: payload.message,
-      });
-    });
+      listen("startup-check", (event) => {
+        const payload = event.payload as {
+          ok: boolean;
+          message: string;
+        };
+        this.emit({
+          type: "startup-check",
+          ok: payload.ok,
+          message: payload.message,
+        });
+      })
+    ]);
   }
 }

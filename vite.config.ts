@@ -19,4 +19,22 @@ export default defineConfig({
       ignored: ["**/src-tauri/**"],
     },
   },
+  build: {
+    // CSS code-splitting: inline small CSS to avoid extra requests
+    cssCodeSplit: false,
+    // Minify CSS with lightningcss for faster, smaller output
+    cssMinify: "lightningcss",
+    // Reduce chunk size warnings threshold
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        // Group Tauri API imports into a shared vendor chunk
+        manualChunks(id) {
+          if (id.includes("@tauri-apps")) {
+            return "tauri-vendor";
+          }
+        },
+      },
+    },
+  },
 });

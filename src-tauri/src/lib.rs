@@ -119,31 +119,40 @@ fn list_available_characters(app: tauri::AppHandle) -> Result<Vec<CharacterOptio
             continue;
         }
 
+        // Build a name→directory-id map in a single pass instead of
+        // re-scanning the directory for every manifest (was O(N×M)).
+        let mut name_to_dir_id: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
+        if let Ok(entries) = fs::read_dir(&root) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let manifest_json = path.join("manifest.json");
+                if !manifest_json.exists() {
+                    continue;
+                }
+                if let Ok(content) = fs::read_to_string(&manifest_json) {
+                    if let Ok(parsed) =
+                        serde_json::from_str::<character::CharacterManifest>(&content)
+                    {
+                        name_to_dir_id.insert(
+                            parsed.name.clone(),
+                            entry.file_name().to_string_lossy().to_string(),
+                        );
+                    }
+                }
+            }
+        }
+
         let manifests = character::loader::scan_characters_dir(&root);
         for manifest in manifests {
-            let guessed_id = fs::read_dir(&root)
-                .ok()
-                .into_iter()
-                .flat_map(|entries| entries.flatten())
-                .find_map(|entry| {
-                    let path = entry.path();
-                    let manifest_json = path.join("manifest.json");
-                    if !manifest_json.exists() {
-                        return None;
-                    }
-                    let content = fs::read_to_string(&manifest_json).ok()?;
-                    let parsed = serde_json::from_str::<character::CharacterManifest>(&content).ok()?;
-                    if parsed.name == manifest.name {
-                        Some(entry.file_name().to_string_lossy().to_string())
-                    } else {
-                        None
-                    }
-                })
+            let id = name_to_dir_id
+                .get(&manifest.name)
+                .cloned()
                 .unwrap_or_else(|| manifest.name.to_lowercase().replace(' ', "-"));
 
-            if seen.insert(guessed_id.clone()) {
+            if seen.insert(id.clone()) {
                 options.push(CharacterOption {
-                    id: guessed_id,
+                    id,
                     name: manifest.name,
                 });
             }
@@ -334,46 +343,6 @@ fn show_island_window<R: Runtime>(app: &AppHandle<R>) {
         let _ = window.unminimize();
         let _ = window.set_focus();
     }
-}
-
-#[allow(dead_code)]
-fn build_tray<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
-    let show_item = MenuItem::with_id(app, TRAY_SHOW_ID, "显示 Claude Dynamic Island", true, None::<&str>)
-        .map_err(|error| error.to_string())?;
-    let exit_item = MenuItem::with_id(app, TRAY_EXIT_ID, "退出", true, None::<&str>)
-        .map_err(|error| error.to_string())?;
-    let menu = Menu::with_items(app, &[&show_item, &exit_item]).map_err(|error| error.to_string())?;
-
-    let mut builder = TrayIconBuilder::with_id("claude-dynamic-island-tray")
-        .menu(&menu)
-        .show_menu_on_left_click(false)
-        .tooltip("Claude Dynamic Island")
-        .on_menu_event(|app, event| {
-            match event.id.as_ref() {
-                TRAY_SHOW_ID => show_island_window(app),
-                TRAY_EXIT_ID => app.exit(0),
-                _ => {}
-            }
-        })
-        .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click {
-                button,
-                button_state,
-                ..
-            } = event
-            {
-                if button == MouseButton::Left && button_state == MouseButtonState::Up {
-                    show_island_window(tray.app_handle());
-                }
-            }
-        });
-
-    if let Some(icon) = app.default_window_icon().cloned() {
-        builder = builder.icon(icon);
-    }
-
-    builder.build(app).map_err(|error| error.to_string())?;
-    Ok(())
 }
 
 fn build_runtime_tray<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {

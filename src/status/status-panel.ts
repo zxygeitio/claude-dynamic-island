@@ -5,7 +5,6 @@ import type {
   SelectionQuestion,
 } from "../types";
 import { EventBus } from "../events/event-bus";
-import { CharacterStateMachine } from "../character/state-machine";
 import { invoke } from "@tauri-apps/api/core";
 
 const MAX_HISTORY_ITEMS = 5;
@@ -23,8 +22,49 @@ export class StatusPanel {
   private totalEvents = 0;
   private totalErrors = 0;
 
-  constructor(eventBus: EventBus, _stateMachine: CharacterStateMachine) {
+  // Cached DOM element references
+  private readonly elCurrentTool: HTMLElement | null;
+  private readonly elCurrentFile: HTMLElement | null;
+  private readonly elCurrentNote: HTMLElement | null;
+  private readonly elSessionId: HTMLElement | null;
+  private readonly elConnectionState: HTMLElement | null;
+  private readonly elEventCount: HTMLElement | null;
+  private readonly elErrorCount: HTMLElement | null;
+  private readonly elLastHookEvent: HTMLElement | null;
+  private readonly elApprovalTimer: HTMLElement | null;
+  private readonly elApprovalButtons: HTMLElement | null;
+  private readonly elBtnApprove: HTMLButtonElement | null;
+  private readonly elBtnDeny: HTMLButtonElement | null;
+  private readonly elHistoryList: HTMLElement | null;
+  private readonly elSelectionPanel: HTMLElement | null;
+  private readonly elSelectionPrompt: HTMLElement | null;
+  private readonly elSelectionOptions: HTMLElement | null;
+  private readonly elSelectionActions: HTMLElement | null;
+  private readonly elSelectionSubmit: HTMLButtonElement | null;
+
+  constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
+
+    // Cache all DOM lookups once
+    this.elCurrentTool = document.getElementById("current-tool");
+    this.elCurrentFile = document.getElementById("current-file");
+    this.elCurrentNote = document.getElementById("current-note");
+    this.elSessionId = document.getElementById("session-id");
+    this.elConnectionState = document.getElementById("connection-state");
+    this.elEventCount = document.getElementById("event-count");
+    this.elErrorCount = document.getElementById("error-count");
+    this.elLastHookEvent = document.getElementById("last-hook-event");
+    this.elApprovalTimer = document.getElementById("approval-timer");
+    this.elApprovalButtons = document.getElementById("approval-buttons");
+    this.elBtnApprove = document.getElementById("btn-approve") as HTMLButtonElement | null;
+    this.elBtnDeny = document.getElementById("btn-deny") as HTMLButtonElement | null;
+    this.elHistoryList = document.getElementById("history-list");
+    this.elSelectionPanel = document.getElementById("selection-panel");
+    this.elSelectionPrompt = document.getElementById("selection-prompt");
+    this.elSelectionOptions = document.getElementById("selection-options");
+    this.elSelectionActions = document.getElementById("selection-actions");
+    this.elSelectionSubmit = document.getElementById("selection-submit") as HTMLButtonElement | null;
+
     this.initEventListeners();
     this.initApprovalButtons();
     this.initSelectionActions();
@@ -109,15 +149,13 @@ export class StatusPanel {
   }
 
   private updateCurrentTool(toolName: string, toolInput: Record<string, unknown>): void {
-    const toolEl = document.getElementById("current-tool");
-    if (toolEl) {
-      toolEl.textContent = toolName;
+    if (this.elCurrentTool) {
+      this.elCurrentTool.textContent = toolName;
     }
 
-    const fileEl = document.getElementById("current-file");
-    if (fileEl) {
+    if (this.elCurrentFile) {
       const filePath = (toolInput.file_path as string) || (toolInput.path as string) || "-";
-      fileEl.textContent = filePath;
+      this.elCurrentFile.textContent = filePath;
     }
 
     if (toolName === "AskUserQuestion") {
@@ -127,41 +165,35 @@ export class StatusPanel {
   }
 
   private updateSessionId(sessionId: string): void {
-    const el = document.getElementById("session-id");
-    if (el) {
-      el.textContent = `Session: ${sessionId.slice(0, 8)}...`;
+    if (this.elSessionId) {
+      this.elSessionId.textContent = `Session: ${sessionId.slice(0, 8)}...`;
     }
   }
 
   private updateCurrentNote(message: string): void {
-    const el = document.getElementById("current-note");
-    if (el) {
-      el.textContent = message || "-";
+    if (this.elCurrentNote) {
+      this.elCurrentNote.textContent = message || "-";
     }
   }
 
   private updateConnectionState(value: string): void {
-    const el = document.getElementById("connection-state");
-    if (el) {
-      el.textContent = value;
+    if (this.elConnectionState) {
+      this.elConnectionState.textContent = value;
     }
   }
 
   private updateLastHookEvent(value: string): void {
-    const el = document.getElementById("last-hook-event");
-    if (el) {
-      el.textContent = value;
+    if (this.elLastHookEvent) {
+      this.elLastHookEvent.textContent = value;
     }
   }
 
   private renderOverview(): void {
-    const eventEl = document.getElementById("event-count");
-    const errorEl = document.getElementById("error-count");
-    if (eventEl) {
-      eventEl.textContent = String(this.totalEvents);
+    if (this.elEventCount) {
+      this.elEventCount.textContent = String(this.totalEvents);
     }
-    if (errorEl) {
-      errorEl.textContent = String(this.totalErrors);
+    if (this.elErrorCount) {
+      this.elErrorCount.textContent = String(this.totalErrors);
     }
   }
 
@@ -199,7 +231,7 @@ export class StatusPanel {
   }
 
   private renderHistory(): void {
-    const listEl = document.getElementById("history-list");
+    const listEl = this.elHistoryList;
     if (!listEl) return;
 
     if (this.actionHistory.length === 0) {
@@ -341,10 +373,9 @@ export class StatusPanel {
     );
     this.renderSelection();
 
-    const panelEl = document.getElementById("selection-panel");
-    if (panelEl) {
-      panelEl.classList.add("visible");
-      panelEl.classList.toggle(
+    if (this.elSelectionPanel) {
+      this.elSelectionPanel.classList.add("visible");
+      this.elSelectionPanel.classList.toggle(
         "selection-panel-empty",
         this.currentSelection.questions.every((question) => question.options.length === 0)
       );
@@ -356,17 +387,14 @@ export class StatusPanel {
     this.selectedAnswers.clear();
     this.isResolvingSelection = false;
 
-    const panelEl = document.getElementById("selection-panel");
-    const optionsEl = document.getElementById("selection-options");
-    const actionsEl = document.getElementById("selection-actions");
-    if (panelEl) {
-      panelEl.classList.remove("visible", "selection-panel-empty");
+    if (this.elSelectionPanel) {
+      this.elSelectionPanel.classList.remove("visible", "selection-panel-empty");
     }
-    if (optionsEl) {
-      optionsEl.replaceChildren();
+    if (this.elSelectionOptions) {
+      this.elSelectionOptions.replaceChildren();
     }
-    if (actionsEl) {
-      actionsEl.classList.remove("visible");
+    if (this.elSelectionActions) {
+      this.elSelectionActions.classList.remove("visible");
     }
   }
 
@@ -375,10 +403,10 @@ export class StatusPanel {
       return;
     }
 
-    const promptEl = document.getElementById("selection-prompt");
-    const optionsEl = document.getElementById("selection-options");
-    const actionsEl = document.getElementById("selection-actions");
-    const submitButton = document.getElementById("selection-submit") as HTMLButtonElement | null;
+    const promptEl = this.elSelectionPrompt;
+    const optionsEl = this.elSelectionOptions;
+    const actionsEl = this.elSelectionActions;
+    const submitButton = this.elSelectionSubmit;
 
     if (promptEl) {
       promptEl.textContent =
@@ -424,6 +452,8 @@ export class StatusPanel {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "selection-option";
+      button.dataset.prompt = question.prompt;
+      button.dataset.option = option;
       if (this.isOptionSelected(question.prompt, option)) {
         button.classList.add("is-active");
       }
@@ -458,7 +488,7 @@ export class StatusPanel {
       this.selectedAnswers.set(question.prompt, [option]);
     }
 
-    this.renderSelection();
+    this.updateSelectionState();
 
     if (
       this.currentSelection &&
@@ -466,6 +496,25 @@ export class StatusPanel {
       !question.multiSelect
     ) {
       void this.submitSelection();
+    }
+  }
+
+  private updateSelectionState(): void {
+    const optionsEl = this.elSelectionOptions;
+    if (!optionsEl) return;
+
+    const buttons = optionsEl.querySelectorAll<HTMLButtonElement>(".selection-option");
+    for (const btn of buttons) {
+      const prompt = btn.dataset.prompt;
+      const option = btn.dataset.option;
+      if (prompt && option) {
+        btn.classList.toggle("is-active", this.isOptionSelected(prompt, option));
+      }
+    }
+
+    const submitButton = this.elSelectionSubmit;
+    if (submitButton) {
+      submitButton.disabled = !this.canSubmitSelection() || this.isResolvingSelection;
     }
   }
 
@@ -532,8 +581,7 @@ export class StatusPanel {
   }
 
   private initSelectionActions(): void {
-    const submitButton = document.getElementById("selection-submit");
-    submitButton?.addEventListener("click", () => {
+    this.elSelectionSubmit?.addEventListener("click", () => {
       void this.submitSelection();
     });
   }
@@ -560,9 +608,8 @@ export class StatusPanel {
     this.isResolvingApproval = false;
     this.setApprovalButtonsDisabled(false);
 
-    const buttonsEl = document.getElementById("approval-buttons");
-    if (buttonsEl) {
-      buttonsEl.classList.add("visible");
+    if (this.elApprovalButtons) {
+      this.elApprovalButtons.classList.add("visible");
     }
 
     this.approvalTimeLeft = Math.max(1, approvalTimeoutSeconds);
@@ -582,9 +629,8 @@ export class StatusPanel {
 
   private hideApproval(): void {
     this.currentApproval = null;
-    const buttonsEl = document.getElementById("approval-buttons");
-    if (buttonsEl) {
-      buttonsEl.classList.remove("visible");
+    if (this.elApprovalButtons) {
+      this.elApprovalButtons.classList.remove("visible");
     }
     if (this.approvalTimer) {
       clearInterval(this.approvalTimer);
@@ -595,9 +641,8 @@ export class StatusPanel {
   }
 
   private updateApprovalTimer(): void {
-    const timerEl = document.getElementById("approval-timer");
-    if (timerEl) {
-      timerEl.textContent = `${this.approvalTimeLeft}s`;
+    if (this.elApprovalTimer) {
+      this.elApprovalTimer.textContent = `${this.approvalTimeLeft}s`;
     }
   }
 
@@ -633,33 +678,26 @@ export class StatusPanel {
   }
 
   private initApprovalButtons(): void {
-    const approveBtn = document.getElementById("btn-approve");
-    const denyBtn = document.getElementById("btn-deny");
-
-    approveBtn?.addEventListener("click", () => {
+    this.elBtnApprove?.addEventListener("click", () => {
       void this.resolveApproval(true);
     });
-    denyBtn?.addEventListener("click", () => {
+    this.elBtnDeny?.addEventListener("click", () => {
       void this.resolveApproval(false);
     });
   }
 
   private setApprovalButtonsDisabled(disabled: boolean): void {
-    const approveBtn = document.getElementById("btn-approve") as HTMLButtonElement | null;
-    const denyBtn = document.getElementById("btn-deny") as HTMLButtonElement | null;
-
-    if (approveBtn) {
-      approveBtn.disabled = disabled;
+    if (this.elBtnApprove) {
+      this.elBtnApprove.disabled = disabled;
     }
-    if (denyBtn) {
-      denyBtn.disabled = disabled;
+    if (this.elBtnDeny) {
+      this.elBtnDeny.disabled = disabled;
     }
   }
 
   private showApprovalError(message: string): void {
-    const timerEl = document.getElementById("approval-timer");
-    if (timerEl) {
-      timerEl.textContent = message;
+    if (this.elApprovalTimer) {
+      this.elApprovalTimer.textContent = message;
     }
   }
 }

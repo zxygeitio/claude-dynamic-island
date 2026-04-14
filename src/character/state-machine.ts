@@ -41,7 +41,7 @@ export class CharacterStateMachine {
     this.listeners.push(listener);
   }
 
-  removeStateChangeLister(listener: StateChangeListener): void {
+  removeStateChangeListener(listener: StateChangeListener): void {
     this.listeners = this.listeners.filter(l => l !== listener);
   }
 

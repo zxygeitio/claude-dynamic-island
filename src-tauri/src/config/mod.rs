@@ -138,15 +138,16 @@ pub fn verify_claude_hook_config(
     port: u16,
     settings_paths: &[PathBuf],
 ) -> Result<HookVerificationResult, Box<dyn std::error::Error + Send + Sync>> {
+    let base = hook_base_url(port);
     let expected = [
-        ("PreToolUse", format!("{}/hooks/pre-tool-use", hook_base_url(port))),
-        ("PostToolUse", format!("{}/hooks/post-tool-use", hook_base_url(port))),
+        ("PreToolUse", format!("{}/hooks/pre-tool-use", base)),
+        ("PostToolUse", format!("{}/hooks/post-tool-use", base)),
         (
             "PostToolUseFailure",
-            format!("{}/hooks/post-tool-use-failure", hook_base_url(port)),
+            format!("{}/hooks/post-tool-use-failure", base),
         ),
-        ("Notification", format!("{}/hooks/notification", hook_base_url(port))),
-        ("Stop", format!("{}/hooks/stop", hook_base_url(port))),
+        ("Notification", format!("{}/hooks/notification", base)),
+        ("Stop", format!("{}/hooks/stop", base)),
     ];
     let mut missing_entries = Vec::new();
 

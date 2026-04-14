@@ -1,6 +1,7 @@
 import type { CharacterManifest } from "../types";
 import defaultCatSpritesheetUrl from "../../characters/default-cat/spritesheet.png";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { isTauri } from "../utils/env";
 
 const DEFAULT_CHARACTER_NAME = "default-cat";
 const EMBEDDED_DEFAULT_MANIFEST: CharacterManifest = {
@@ -80,7 +81,7 @@ export class SpriteLoader {
       this.imageSrcByCharacter.set(characterName, `${this.basePath}/${characterName}/${manifest.spritesheet}`);
       return manifest;
     } catch (webError) {
-      if (!("__TAURI_INTERNALS__" in window)) {
+      if (!isTauri()) {
         throw webError;
       }
 

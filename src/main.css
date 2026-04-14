@@ -432,14 +432,28 @@ body[data-tauri] .island-pill.click-bounce .island-character {
   box-shadow: 0 0 10px currentColor;
 }
 
-.status-indicator.working { background: var(--color-working); }
-.status-indicator.waiting { background: var(--color-waiting); animation: blink 1s ease-in-out infinite; }
+.status-indicator.working { 
+  background: var(--color-working); 
+  animation: pulse-status 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.status-indicator.waiting { 
+  background: var(--color-waiting); 
+  animation: pulse-status 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; 
+}
 .status-indicator.done { background: var(--color-done); }
 .status-indicator.error { background: var(--color-error); }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+@keyframes pulse-status {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 10px currentColor;
+  }
+  50% { 
+    opacity: 0.5;
+    transform: scale(0.85);
+    box-shadow: 0 0 4px currentColor;
+  }
 }
 
 .status-text {
@@ -528,7 +542,8 @@ body[data-tauri] .island-pill.click-bounce .island-character {
 .status-badge.done { color: #042116; }
 .status-badge.error { color: #fff4f3; }
 
-.quit-button {
+/* Shared base for island header action buttons */
+.island-action-button {
   display: none;
   width: 24px;
   height: 24px;
@@ -538,10 +553,23 @@ body[data-tauri] .island-pill.click-bounce .island-character {
     linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
     rgba(0, 0, 0, 0.22);
   color: rgba(255, 255, 255, 0.72);
-  font-size: 15px;
-  line-height: 1;
   cursor: pointer;
   transition: background 140ms ease, color 140ms ease, transform 120ms ease;
+}
+
+.island-action-button:active {
+  transform: scale(0.94);
+}
+
+body[data-tauri] .island-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quit-button {
+  font-size: 15px;
+  line-height: 1;
 }
 
 .quit-button svg {
@@ -551,20 +579,6 @@ body[data-tauri] .island-pill.click-bounce .island-character {
   stroke-width: 1.8;
   fill: none;
   stroke-linecap: round;
-}
-
-.settings-button {
-  display: none;
-  width: 24px;
-  height: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
-    rgba(0, 0, 0, 0.22);
-  color: rgba(255, 255, 255, 0.72);
-  cursor: pointer;
-  transition: background 140ms ease, color 140ms ease, transform 120ms ease;
 }
 
 .settings-button svg {
@@ -577,18 +591,6 @@ body[data-tauri] .island-pill.click-bounce .island-character {
   stroke-linejoin: round;
 }
 
-body[data-tauri] .quit-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-body[data-tauri] .settings-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .settings-button:hover {
   background:
     linear-gradient(180deg, rgba(var(--accent-rgb), 0.28), rgba(var(--accent-rgb), 0.12)),
@@ -596,19 +598,11 @@ body[data-tauri] .settings-button {
   color: rgba(255, 255, 255, 0.94);
 }
 
-.settings-button:active {
-  transform: scale(0.94);
-}
-
 .quit-button:hover {
   background:
     linear-gradient(180deg, rgba(255, 122, 115, 0.32), rgba(255, 122, 115, 0.14)),
     rgba(0, 0, 0, 0.26);
   color: rgba(255, 255, 255, 0.94);
-}
-
-.quit-button:active {
-  transform: scale(0.94);
 }
 
 .status-details {
@@ -1135,4 +1129,15 @@ body[data-tauri] .settings-button {
 .selection-submit:disabled {
   cursor: default;
   opacity: 0.45;
+}
+
+/* ===== Accessibility: Reduced Motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
