@@ -10,6 +10,7 @@ import { open } from "@tauri-apps/plugin-shell";
 
 const MAX_HISTORY_ITEMS = 5;
 const MAX_DETAIL_VALUE_LENGTH = 220;
+const MAX_PAYLOAD_LENGTH = 4000;
 
 interface OperationDetail {
   label: string;
@@ -35,6 +36,8 @@ export class StatusPanel {
   private totalEvents = 0;
   private totalErrors = 0;
   private currentOpenPath: string | null = null;
+  private payloadVisible = false;
+  private lastPayloadText = "No payload yet";
 
   // Cached DOM element references
   private readonly elCurrentTool: HTMLElement | null;
@@ -59,6 +62,8 @@ export class StatusPanel {
   private readonly elOperationSummary: HTMLElement | null;
   private readonly elOperationOpen: HTMLButtonElement | null;
   private readonly elOperationDetailList: HTMLElement | null;
+  private readonly elPayloadToggle: HTMLButtonElement | null;
+  private readonly elPayloadView: HTMLElement | null;
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -86,14 +91,18 @@ export class StatusPanel {
     this.elOperationSummary = document.getElementById("operation-summary");
     this.elOperationOpen = document.getElementById("operation-open") as HTMLButtonElement | null;
     this.elOperationDetailList = document.getElementById("operation-detail-list");
+    this.elPayloadToggle = document.getElementById("payload-toggle") as HTMLButtonElement | null;
+    this.elPayloadView = document.getElementById("payload-view");
 
     this.initEventListeners();
     this.initApprovalButtons();
     this.initSelectionActions();
     this.initOpenAction();
+    this.initPayloadToggle();
     this.updateConnectionState("Armed");
     this.updateCurrentNote("Ready for Claude hook events");
     this.updateLastHookEvent("Waiting for first hook");
+    this.renderPayloadView();
     this.renderOverview();
     this.renderHistory();
   }
@@ -102,6 +111,7 @@ export class StatusPanel {
     this.eventBus.subscribe((event) => {
       this.totalEvents += 1;
       this.updateConnectionState("Live");
+      this.updateDebugPayload(event);
 
       switch (event.type) {
         case "pre-tool-use":
@@ -222,6 +232,33 @@ export class StatusPanel {
     }
     if (this.elErrorCount) {
       this.elErrorCount.textContent = String(this.totalErrors);
+    }
+  }
+
+  private updateDebugPayload(event: unknown): void {
+    try {
+      const text = JSON.stringify(event, null, 2);
+      this.lastPayloadText = text.length > MAX_PAYLOAD_LENGTH
+        ? `${text.slice(0, MAX_PAYLOAD_LENGTH - 3)}...`
+        : text;
+    } catch {
+      this.lastPayloadText = "Failed to serialize event payload";
+    }
+
+    this.renderPayloadView();
+  }
+
+  private renderPayloadView(): void {
+    if (this.elPayloadView) {
+      this.elPayloadView.textContent = this.lastPayloadText;
+      this.elPayloadView.hidden = !this.payloadVisible;
+    }
+    if (this.elPayloadToggle) {
+      this.elPayloadToggle.classList.toggle("is-active", this.payloadVisible);
+      this.elPayloadToggle.setAttribute(
+        "aria-expanded",
+        this.payloadVisible ? "true" : "false"
+      );
     }
   }
 
@@ -798,6 +835,15 @@ export class StatusPanel {
       }
 
       await this.openPath(this.currentOpenPath);
+    });
+  }
+
+  private initPayloadToggle(): void {
+    this.elPayloadToggle?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.payloadVisible = !this.payloadVisible;
+      this.renderPayloadView();
     });
   }
 

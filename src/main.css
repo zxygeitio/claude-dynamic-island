@@ -659,6 +659,8 @@ body[data-tauri] .island-action-button {
 }
 
 .status-signal-card {
+  display: grid;
+  gap: 4px;
   padding: 8px 10px;
   border-radius: 14px;
   background:
@@ -668,12 +670,18 @@ body[data-tauri] .island-action-button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
+.signal-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .signal-card-label {
   font-size: 8px;
   color: rgba(255, 255, 255, 0.45);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-bottom: 3px;
 }
 
 .signal-card-value {
@@ -683,6 +691,45 @@ body[data-tauri] .island-action-button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.signal-payload-toggle {
+  flex-shrink: 0;
+  border: 1px solid rgba(var(--accent-rgb), 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(255, 255, 255, 0.74);
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 3px 7px;
+}
+
+.signal-payload-toggle:hover,
+.signal-payload-toggle.is-active {
+  color: rgba(255, 255, 255, 0.94);
+  background: rgba(var(--accent-rgb), 0.15);
+}
+
+.signal-payload {
+  max-height: 86px;
+  overflow: auto;
+  margin: 2px 0 0;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.74);
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  font-size: 8px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+}
+
+.signal-payload[hidden] {
+  display: none;
 }
 
 .detail-row {

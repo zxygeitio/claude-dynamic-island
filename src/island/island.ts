@@ -200,6 +200,7 @@ export class IslandController {
       target.closest(".quit-button") ||
       target.closest(".operation-insight") ||
       target.closest(".history-item-link") ||
+      target.closest(".status-signal-card") ||
       target.closest(".island-expand-hint")
     );
   }
