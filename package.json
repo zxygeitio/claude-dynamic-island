@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "node --test tests/status-format.test.mjs",
     "build": "tsc && vite build",
     "build:release": "powershell -ExecutionPolicy Bypass -File scripts/build-release.ps1",
     "clean:project": "powershell -ExecutionPolicy Bypass -File scripts/clean-project.ps1",

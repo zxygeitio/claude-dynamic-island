@@ -1,3 +1,5 @@
+import type { ActivityTone } from "./status/status-format";
+
 export type CharacterState = "idle" | "working" | "celebrating" | "sleeping" | "confused";
 
 export type IslandStatus = "idle" | "working" | "waiting" | "done" | "error";
@@ -64,6 +66,7 @@ export interface ActionRecord {
   timestamp: number;
   isError: boolean;
   path?: string;
+  tone?: ActivityTone;
 }
 
 export interface AppSettings {

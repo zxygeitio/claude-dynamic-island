@@ -7,8 +7,15 @@ import type {
 import { EventBus } from "../events/event-bus";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-shell";
+import { isTauri } from "../utils/env";
+import {
+  createHistorySummary,
+  formatDuration,
+  formatRelativeTime,
+  getPrimaryPath,
+} from "./status-format";
 
-const MAX_HISTORY_ITEMS = 5;
+const MAX_HISTORY_ITEMS = 7;
 const MAX_DETAIL_VALUE_LENGTH = 220;
 const MAX_PAYLOAD_LENGTH = 4000;
 
@@ -38,8 +45,11 @@ export class StatusPanel {
   private currentOpenPath: string | null = null;
   private payloadVisible = false;
   private lastPayloadText = "No payload yet";
+  private sessionStartedAt: number | null = null;
+  private lastEventAt: number | null = null;
 
   // Cached DOM element references
+  private readonly elToolIcon: HTMLElement | null;
   private readonly elCurrentTool: HTMLElement | null;
   private readonly elCurrentFile: HTMLElement | null;
   private readonly elCurrentNote: HTMLElement | null;
@@ -47,6 +57,7 @@ export class StatusPanel {
   private readonly elConnectionState: HTMLElement | null;
   private readonly elEventCount: HTMLElement | null;
   private readonly elErrorCount: HTMLElement | null;
+  private readonly elActiveDuration: HTMLElement | null;
   private readonly elLastHookEvent: HTMLElement | null;
   private readonly elApprovalTimer: HTMLElement | null;
   private readonly elApprovalButtons: HTMLElement | null;
@@ -69,6 +80,7 @@ export class StatusPanel {
     this.eventBus = eventBus;
 
     // Cache all DOM lookups once
+    this.elToolIcon = document.getElementById("tool-icon");
     this.elCurrentTool = document.getElementById("current-tool");
     this.elCurrentFile = document.getElementById("current-file");
     this.elCurrentNote = document.getElementById("current-note");
@@ -76,6 +88,7 @@ export class StatusPanel {
     this.elConnectionState = document.getElementById("connection-state");
     this.elEventCount = document.getElementById("event-count");
     this.elErrorCount = document.getElementById("error-count");
+    this.elActiveDuration = document.getElementById("active-duration");
     this.elLastHookEvent = document.getElementById("last-hook-event");
     this.elApprovalTimer = document.getElementById("approval-timer");
     this.elApprovalButtons = document.getElementById("approval-buttons");
@@ -105,10 +118,12 @@ export class StatusPanel {
     this.renderPayloadView();
     this.renderOverview();
     this.renderHistory();
+    setInterval(() => this.renderOverview(), 1000);
   }
 
   private initEventListeners(): void {
     this.eventBus.subscribe((event) => {
+      this.markActivity();
       this.totalEvents += 1;
       this.updateConnectionState("Live");
       this.updateDebugPayload(event);
@@ -140,6 +155,7 @@ export class StatusPanel {
           this.updateLastHookEvent(`${event.hookEventName}: ${event.toolName}`);
           this.hideSelection();
           this.hideApproval();
+          this.updateCurrentTool(event.toolName, event.toolInput);
           this.renderOperationInsight(event.toolName, event.toolInput, event.toolOutput);
           this.addActionToHistory(event.toolName, event.toolInput, event.isError);
           if (event.isError) {
@@ -167,6 +183,7 @@ export class StatusPanel {
         case "approval-requested":
           this.updateLastHookEvent(`Approval: ${event.toolName}`);
           this.hideSelection();
+          this.updateCurrentTool(event.toolName, event.toolInput);
           this.renderOperationInsight(event.toolName, event.toolInput);
           this.showApproval(event.approvalId, event.toolName, event.toolInput, "", 30);
           break;
@@ -186,10 +203,18 @@ export class StatusPanel {
     });
   }
 
+  private markActivity(): void {
+    const now = Date.now();
+    this.sessionStartedAt ??= now;
+    this.lastEventAt = now;
+  }
+
   private updateCurrentTool(toolName: string, toolInput: Record<string, unknown>): void {
     if (this.elCurrentTool) {
       this.elCurrentTool.textContent = toolName;
     }
+
+    this.updateToolIcon(toolName);
 
     if (this.elCurrentFile) {
       const filePath = this.getPrimaryPath(toolInput) || "-";
@@ -200,6 +225,26 @@ export class StatusPanel {
       const selection = this.parseSelection("", toolInput);
       this.updateCurrentNote(selection.questions[0]?.prompt || "Claude is waiting for your input");
     }
+  }
+
+  private updateToolIcon(toolName: string): void {
+    if (!this.elToolIcon) {
+      return;
+    }
+
+    const toolIconByName: Record<string, string> = {
+      AskUserQuestion: "?",
+      Bash: ">_",
+      Edit: "E",
+      Glob: "*",
+      Grep: "G",
+      MultiEdit: "M",
+      Read: "R",
+      Write: "W",
+    };
+
+    this.elToolIcon.textContent = toolIconByName[toolName] ?? toolName.slice(0, 1).toUpperCase();
+    this.elToolIcon.dataset.tool = toolName.toLowerCase();
   }
 
   private updateSessionId(sessionId: string): void {
@@ -232,6 +277,12 @@ export class StatusPanel {
     }
     if (this.elErrorCount) {
       this.elErrorCount.textContent = String(this.totalErrors);
+    }
+    if (this.elActiveDuration) {
+      this.elActiveDuration.textContent = formatDuration(this.sessionStartedAt);
+      this.elActiveDuration.title = this.lastEventAt
+        ? `Last event ${formatRelativeTime(this.lastEventAt)}`
+        : "No events yet";
     }
   }
 
@@ -267,32 +318,17 @@ export class StatusPanel {
     toolInput: Record<string, unknown>,
     isError: boolean
   ): void {
-    let summary = toolName;
-    const path = this.getPrimaryPath(toolInput);
-
-    if (toolName === "Bash" && typeof toolInput.command === "string") {
-      summary = `Bash: ${toolInput.command.slice(0, 30)}`;
-    } else if (
-      (toolName === "Write" || toolName === "Edit") &&
-      typeof toolInput.file_path === "string"
-    ) {
-      const parts = toolInput.file_path.replace(/\\/g, "/").split("/");
-      summary = `${toolName}: ${parts.slice(-2).join("/")}`;
-    } else if (toolName === "Read" && typeof toolInput.file_path === "string") {
-      const parts = toolInput.file_path.replace(/\\/g, "/").split("/");
-      summary = `Read: ${parts.slice(-2).join("/")}`;
-    } else if (toolName === "Grep" && typeof toolInput.pattern === "string") {
-      summary = `Grep: ${toolInput.pattern.slice(0, 20)}`;
-    }
+    const historySummary = createHistorySummary(toolName, toolInput, isError);
 
     const record: ActionRecord = {
       toolName,
-      summary,
+      summary: historySummary.summary,
       timestamp: Date.now(),
       isError,
+      tone: historySummary.tone,
     };
-    if (path) {
-      record.path = path;
+    if (historySummary.path) {
+      record.path = historySummary.path;
     }
 
     this.actionHistory = [record, ...this.actionHistory].slice(0, MAX_HISTORY_ITEMS);
@@ -430,12 +466,7 @@ export class StatusPanel {
   }
 
   private getPrimaryPath(toolInput: Record<string, unknown>): string | null {
-    return this.pickFirstString(toolInput, [
-      "file_path",
-      "path",
-      "notebook_path",
-      "cwd",
-    ]);
+    return getPrimaryPath(toolInput);
   }
 
   private toDisplayValue(value: unknown): string | null {
@@ -474,14 +505,33 @@ export class StatusPanel {
       return;
     }
 
+    const now = Date.now();
+
     listEl.replaceChildren(
       ...this.actionHistory.map((action) => {
-        const item = document.createElement("div");
-        item.className = "history-item";
-        item.textContent = action.summary;
-        if (action.isError) {
-          item.style.color = "var(--color-error)";
+        const item = action.path
+          ? document.createElement("button")
+          : document.createElement("div");
+        const tone = action.tone ?? (action.isError ? "danger" : "neutral");
+        item.className = `history-item history-tone-${tone}`;
+
+        if (item instanceof HTMLButtonElement) {
+          item.type = "button";
         }
+
+        const dot = document.createElement("span");
+        dot.className = "history-item-dot";
+
+        const summary = document.createElement("span");
+        summary.className = "history-item-summary";
+        summary.textContent = action.summary;
+
+        const time = document.createElement("span");
+        time.className = "history-item-time";
+        time.textContent = formatRelativeTime(action.timestamp, now);
+
+        item.append(dot, summary, time);
+
         if (action.path) {
           item.classList.add("history-item-link");
           item.title = `Open ${action.path}`;
@@ -660,15 +710,15 @@ export class StatusPanel {
       );
     }
 
-    const autoSubmit =
-      this.currentSelection.questions.length === 1 &&
-      !this.currentSelection.questions[0].multiSelect;
-
     if (actionsEl) {
-      actionsEl.classList.toggle("visible", !autoSubmit);
+      actionsEl.classList.toggle(
+        "visible",
+        this.currentSelection.questions.some((question) => question.options.length > 0)
+      );
     }
     if (submitButton) {
       submitButton.disabled = !this.canSubmitSelection() || this.isResolvingSelection;
+      submitButton.textContent = this.isResolvingSelection ? "Sending..." : "Send Answer";
     }
   }
 
@@ -729,13 +779,7 @@ export class StatusPanel {
 
     this.updateSelectionState();
 
-    if (
-      this.currentSelection &&
-      this.currentSelection.questions.length === 1 &&
-      !question.multiSelect
-    ) {
-      void this.submitSelection();
-    }
+    this.renderSelection();
   }
 
   private updateSelectionState(): void {
@@ -798,6 +842,12 @@ export class StatusPanel {
 
     this.isResolvingSelection = true;
     this.renderSelection();
+
+    if (!isTauri()) {
+      this.updateCurrentNote("Preview answer sent");
+      this.hideSelection();
+      return;
+    }
 
     try {
       const resolved = await invoke<boolean>("resolve_selection", {
@@ -875,6 +925,7 @@ export class StatusPanel {
       sessionId,
       timestamp: Date.now(),
     };
+    document.body.dataset.approval = toolName || "true";
     this.isResolvingApproval = false;
     this.setApprovalButtonsDisabled(false);
 
@@ -899,6 +950,7 @@ export class StatusPanel {
 
   private hideApproval(): void {
     this.currentApproval = null;
+    delete document.body.dataset.approval;
     if (this.elApprovalButtons) {
       this.elApprovalButtons.classList.remove("visible");
     }
@@ -921,6 +973,17 @@ export class StatusPanel {
 
     this.isResolvingApproval = true;
     this.setApprovalButtonsDisabled(true);
+
+    if (!isTauri()) {
+      this.eventBus.emit({
+        type: "approval-resolved",
+        approvalId: this.currentApproval.approvalId,
+        approved,
+      });
+      this.updateCurrentNote(approved ? "Preview approval allowed" : "Preview approval denied");
+      this.hideApproval();
+      return;
+    }
 
     try {
       const resolved = await invoke<boolean>("resolve_approval", {

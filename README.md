@@ -13,6 +13,8 @@ Claude Code is powerful, but its hook events usually live in the terminal. This 
 - top-docked dynamic island window
 - pixel mascot with state-driven animation
 - in-island approvals and selections
+- browser preview controls for local UI smoke tests and screenshots
+- activity timeline with tool type, elapsed time, and approval state
 - tray controls with show and exit actions
 - startup hook self-check
 - portable EXE and NSIS installer builds
@@ -38,6 +40,8 @@ Claude Code is powerful, but its hook events usually live in the terminal. This 
 - Auto-approve support for safe tools such as `Read`, `Grep`, and `Glob`
 - In-island approval actions for gated tools
 - In-island `AskUserQuestion` choices
+- Browser preview controls for Read, approval, question, error, and completion states
+- Compact activity history with tool-aware badges and elapsed session timing
 - Tray menu with `Show` and `Exit`
 - Startup hook diagnostics so the app can surface configuration issues early
 - Portable release folder with `_up_` resources
@@ -126,6 +130,7 @@ scripts/                build, icon, and release helper scripts
 Core verification commands:
 
 ```bash
+npm test
 npx tsc --noEmit
 cd src-tauri && cargo check && cargo test
 ```

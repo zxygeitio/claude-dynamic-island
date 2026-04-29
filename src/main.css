@@ -12,7 +12,7 @@
   --island-radius: 26px;
   --island-radius-expanded: 28px;
   --island-collapsed-height: 52px;
-  --island-expanded-height: 380px;
+  --island-expanded-height: 432px;
   --island-width: 364px;
   --island-width-expanded: 520px;
   --text-primary: rgba(255, 255, 255, 0.96);
@@ -232,8 +232,9 @@ body[data-tauri] .island-pill {
 
 .island-pill.expanded {
   grid-template-columns: 78px minmax(0, 1fr) 26px;
-  grid-template-rows: var(--island-expanded-height);
+  grid-template-rows: minmax(0, 1fr);
   width: var(--island-width-expanded);
+  height: var(--island-expanded-height);
   border-radius: var(--island-radius-expanded);
   background: var(--island-bg-expanded);
   min-height: var(--island-expanded-height);
@@ -467,8 +468,27 @@ body[data-tauri] .island-pill.click-bounce .island-character {
 }
 
 .tool-icon {
-  font-size: 11px;
-  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--accent-rgb), 0.16);
+  background:
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.14), rgba(255, 255, 255, 0.025)),
+    rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.tool-icon:empty {
+  display: none;
 }
 
 /* Hide collapsed content when expanded */
@@ -489,7 +509,7 @@ body[data-tauri] .island-pill.click-bounce .island-character {
 .island-pill.expanded .status-expanded {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
   opacity: 1;
 }
 
@@ -509,6 +529,90 @@ body[data-tauri] .island-pill.click-bounce .island-character {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.status-pulse-strip {
+  display: grid;
+  grid-template-columns: 1.4fr 0.9fr 1.1fr 0.7fr;
+  gap: 5px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.status-pulse-strip span {
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.72));
+  opacity: 0.52;
+}
+
+.status-pulse-strip span:nth-child(2) {
+  background: linear-gradient(90deg, rgba(126, 242, 184, 0.2), rgba(126, 242, 184, 0.62));
+}
+
+.status-pulse-strip span:nth-child(3) {
+  background: linear-gradient(90deg, rgba(255, 200, 77, 0.18), rgba(255, 200, 77, 0.58));
+}
+
+.status-pulse-strip span:nth-child(4) {
+  background: linear-gradient(90deg, rgba(255, 123, 115, 0.16), rgba(255, 123, 115, 0.52));
+}
+
+.preview-controls {
+  display: none;
+  align-items: center;
+  grid-template-columns: auto repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.018)),
+    rgba(255, 255, 255, 0.014);
+}
+
+body[data-preview="true"] .preview-controls {
+  display: grid;
+}
+
+.preview-label {
+  padding: 0 4px;
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.preview-button {
+  min-width: 0;
+  border: 1px solid rgba(var(--accent-rgb), 0.18);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-rgb), 0.06)),
+    rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 5px 7px;
+  transition: transform 120ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.preview-button:hover {
+  border-color: rgba(var(--accent-rgb), 0.34);
+  background:
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.28), rgba(var(--accent-rgb), 0.08)),
+    rgba(255, 255, 255, 0.035);
+}
+
+.preview-button:active {
+  transform: scale(0.96);
+}
+
+.preview-button-danger {
+  border-color: rgba(255, 123, 115, 0.22);
 }
 
 .session-id {
@@ -617,6 +721,13 @@ body[data-tauri] .island-action-button {
   overflow: hidden;
 }
 
+body[data-approval] .status-details {
+  border-color: rgba(255, 200, 77, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 200, 77, 0.08), rgba(255, 255, 255, 0.02)),
+    rgba(255, 255, 255, 0.018);
+}
+
 .status-details::before {
   content: "";
   position: absolute;
@@ -629,12 +740,12 @@ body[data-tauri] .island-action-button {
 
 .status-overview {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
 }
 
 .overview-chip {
-  padding: 7px 9px;
+  padding: 7px 8px;
   border-radius: 13px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
@@ -832,7 +943,7 @@ body[data-tauri] .island-action-button {
 
 .operation-detail-item {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 60px minmax(0, 1fr);
   gap: 7px;
   align-items: start;
   min-width: 0;
@@ -894,12 +1005,16 @@ body[data-tauri] .island-action-button {
 }
 
 .history-item {
+  appearance: none;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 26px;
   font-size: 9px;
   color: rgba(255, 255, 255, 0.86);
   font-family: "Cascadia Code", "Fira Code", monospace;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   line-height: 1.35;
   padding: 5px 8px;
   border-radius: 10px;
@@ -908,6 +1023,49 @@ body[data-tauri] .island-action-button {
     rgba(255, 255, 255, 0.015);
   border: 1px solid rgba(255, 255, 255, 0.04);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  text-align: left;
+}
+
+.history-item-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 0 8px currentColor;
+}
+
+.history-item-summary {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-item-time {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 8px;
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  white-space: nowrap;
+}
+
+.history-tone-info .history-item-dot {
+  background: var(--color-working);
+}
+
+.history-tone-waiting .history-item-dot {
+  background: var(--color-waiting);
+}
+
+.history-tone-success .history-item-dot {
+  background: var(--color-done);
+}
+
+.history-tone-danger {
+  color: rgba(255, 172, 166, 0.96);
+}
+
+.history-tone-danger .history-item-dot {
+  background: var(--color-error);
 }
 
 .history-item-link {
@@ -1046,6 +1204,7 @@ body[data-tauri] .island-action-button {
 }
 
 .history-item-empty {
+  display: block;
   color: rgba(255, 255, 255, 0.42);
   font-style: italic;
 }
@@ -1066,15 +1225,17 @@ body[data-tauri] .island-action-button {
 }
 
 .island-pill.expanded .approval-buttons.visible {
-  position: absolute;
-  top: 96px;
-  left: 16px;
-  width: 64px;
+  position: static;
+  width: 100%;
   margin-top: 0;
-  padding-top: 0;
-  border-top: none;
-  flex-direction: column;
-  align-items: stretch;
+  padding: 8px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 200, 77, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 200, 77, 0.1), rgba(255, 255, 255, 0.018)),
+    rgba(255, 255, 255, 0.018);
+  flex-direction: row;
+  align-items: center;
   gap: 6px;
   z-index: 3;
 }
@@ -1092,8 +1253,8 @@ body[data-tauri] .island-action-button {
 
 .island-pill.expanded .btn-approve,
 .island-pill.expanded .btn-deny {
-  width: 100%;
-  padding: 6px 0;
+  flex: 1;
+  padding: 7px 0;
   font-size: 10px;
 }
 
@@ -1121,10 +1282,15 @@ body[data-tauri] .island-action-button {
 }
 
 .island-pill.expanded .approval-timer {
-  margin-left: 0;
+  margin-left: 2px;
   text-align: center;
   font-size: 9px;
-  color: rgba(255, 255, 255, 0.62);
+  font-weight: 800;
+  color: rgba(255, 225, 154, 0.94);
+  padding: 5px 7px;
+  border-radius: 999px;
+  background: rgba(255, 200, 77, 0.1);
+  border: 1px solid rgba(255, 200, 77, 0.18);
 }
 
 /* ===== Expand Hint ===== */
@@ -1134,15 +1300,29 @@ body[data-tauri] .island-action-button {
   justify-content: center;
   width: 22px;
   height: 22px;
+  border: none;
+  background: transparent;
   color: var(--text-dim);
   cursor: pointer;
   transition: transform 300ms var(--transition-spring);
   align-self: center;
   justify-self: end;
+  padding: 0;
 }
 
 .island-expand-hint:hover {
   color: var(--text-secondary);
+}
+
+.island-expand-hint:focus-visible,
+.preview-button:focus-visible,
+.selection-option:focus-visible,
+.btn-approve:focus-visible,
+.btn-deny:focus-visible,
+.settings-recheck:focus-visible,
+.settings-save:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb), 0.55);
+  outline-offset: 2px;
 }
 
 .island-pill.expanded .island-expand-hint {

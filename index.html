@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Claude Dynamic Island</title>
+    <link rel="icon" type="image/png" href="/src-tauri/icons/32x32.png" />
     <link rel="stylesheet" href="/src/main.css" />
   </head>
   <body>
@@ -35,6 +36,20 @@
                   </svg>
                 </button>
               </div>
+            </div>
+            <div class="status-pulse-strip" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <div class="preview-controls" id="preview-controls">
+              <span class="preview-label">Preview</span>
+              <button class="preview-button" id="preview-demo-read" type="button">Read</button>
+              <button class="preview-button" id="preview-demo-approval" type="button">Gate</button>
+              <button class="preview-button" id="preview-demo-question" type="button">Ask</button>
+              <button class="preview-button preview-button-danger" id="preview-demo-error" type="button">Error</button>
+              <button class="preview-button" id="preview-demo-done" type="button">Done</button>
             </div>
             <div class="settings-panel" id="settings-panel">
               <div class="settings-panel-title">Runtime Settings</div>
@@ -95,6 +110,10 @@
                 <span class="overview-chip-label">Errors</span>
                 <span class="overview-chip-value" id="error-count">0</span>
               </div>
+              <div class="overview-chip">
+                <span class="overview-chip-label">Active</span>
+                <span class="overview-chip-value" id="active-duration">0s</span>
+              </div>
             </div>
             <div class="status-signal-card">
               <div class="signal-card-header">
@@ -119,15 +138,15 @@
             <div class="approval-buttons" id="approval-buttons">
               <button class="btn-approve" id="btn-approve">Approve</button>
               <button class="btn-deny" id="btn-deny">Deny</button>
-              <span class="approval-timer" id="approval-timer">30s</span>
+              <span class="approval-timer" id="approval-timer" aria-live="polite">30s</span>
             </div>
           </div>
         </div>
-        <div class="island-expand-hint" id="expand-hint">
+        <button class="island-expand-hint" id="expand-hint" type="button" aria-label="Toggle expanded status" aria-expanded="false">
           <svg width="12" height="12" viewBox="0 0 12 12">
             <path d="M3 5L6 8L9 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
           </svg>
-        </div>
+        </button>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

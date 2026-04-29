@@ -7,6 +7,7 @@ import { EventOrchestrator } from "./events/event-orchestrator";
 import { StatusPanel } from "./status/status-panel";
 import { SettingsStore } from "./settings/settings-store";
 import { SettingsPanelController } from "./settings/settings-panel";
+import { initPreviewControls } from "./preview/demo-controls";
 import type { TransitionType } from "./character/renderer";
 import type { RuntimeSettings } from "./types";
 import { invoke } from "@tauri-apps/api/core";
@@ -42,6 +43,10 @@ async function init() {
     );
     const island = new IslandController();
     new StatusPanel(eventBus);
+    if (!isTauri()) {
+      document.body.dataset.preview = "true";
+      initPreviewControls(eventBus);
+    }
 
     // Shared mutable reference for the active character id.
     const activeCharacterRef = { value: settings.selectedCharacter };
@@ -69,7 +74,9 @@ async function init() {
     };
 
     // ── Event wiring ─────────────────────────────────────────────────────
-    await eventBus.listenTauriEvents();
+    if (isTauri()) {
+      await eventBus.listenTauriEvents();
+    }
 
     // Event orchestrator handles event→island/stateMachine mapping
     new EventOrchestrator(eventBus, island, stateMachine, updateHooksStatus);

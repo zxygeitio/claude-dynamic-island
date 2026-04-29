@@ -9,6 +9,7 @@ export class IslandController {
 
   private island: HTMLElement;
   private pill: HTMLElement;
+  private expandHint: HTMLElement | null;
   private statusIndicator: HTMLElement;
   private statusText: HTMLElement;
   private isExpanded = false;
@@ -20,6 +21,7 @@ export class IslandController {
   constructor() {
     this.island = document.getElementById("island") as HTMLElement;
     this.pill = document.querySelector(".island-pill") as HTMLElement;
+    this.expandHint = document.getElementById("expand-hint");
     this.statusIndicator = document.getElementById("status-indicator") as HTMLElement;
     this.statusText = document.getElementById("status-text") as HTMLElement;
     this.detectTauriWindow();
@@ -34,6 +36,7 @@ export class IslandController {
     this.pill.classList.add("expanded");
     this.island.classList.add("expanded");
     document.body.dataset.expanded = "true";
+    this.expandHint?.setAttribute("aria-expanded", "true");
     void this.syncWindowFrame();
   }
 
@@ -43,6 +46,7 @@ export class IslandController {
     this.pill.classList.remove("expanded");
     this.island.classList.remove("expanded");
     delete document.body.dataset.expanded;
+    this.expandHint?.setAttribute("aria-expanded", "false");
     void this.syncWindowFrame();
   }
 
