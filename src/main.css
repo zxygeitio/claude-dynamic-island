@@ -606,7 +606,7 @@ body[data-tauri] .island-action-button {
 }
 
 .status-details {
-  padding: 10px 12px 10px 14px;
+  padding: 9px 12px 9px 14px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.028)),
     rgba(255, 255, 255, 0.02);
@@ -716,6 +716,97 @@ body[data-tauri] .island-action-button {
   font-size: 9px;
 }
 
+.operation-insight {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.operation-insight[hidden] {
+  display: none;
+}
+
+.operation-insight-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.operation-summary {
+  min-width: 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 10px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operation-open {
+  flex-shrink: 0;
+  border: 1px solid rgba(var(--accent-rgb), 0.22);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.24), rgba(var(--accent-rgb), 0.1)),
+    rgba(255, 255, 255, 0.035);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+
+.operation-open:hover {
+  border-color: rgba(var(--accent-rgb), 0.42);
+  background:
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.34), rgba(var(--accent-rgb), 0.16)),
+    rgba(255, 255, 255, 0.04);
+}
+
+.operation-detail-list {
+  display: grid;
+  gap: 4px;
+  max-height: 66px;
+  overflow-y: auto;
+  padding-right: 3px;
+}
+
+.operation-detail-list::-webkit-scrollbar {
+  width: 3px;
+}
+
+.operation-detail-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+.operation-detail-item {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 7px;
+  align-items: start;
+  min-width: 0;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.operation-detail-label {
+  color: rgba(255, 255, 255, 0.42);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.operation-detail-value {
+  min-width: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* Action History */
 .action-history {
   display: flex;
@@ -770,6 +861,17 @@ body[data-tauri] .island-action-button {
     rgba(255, 255, 255, 0.015);
   border: 1px solid rgba(255, 255, 255, 0.04);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.history-item-link {
+  cursor: pointer;
+}
+
+.history-item-link:hover {
+  border-color: rgba(var(--accent-rgb), 0.22);
+  background:
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.09), rgba(255, 255, 255, 0.018)),
+    rgba(255, 255, 255, 0.018);
 }
 
 .settings-panel {

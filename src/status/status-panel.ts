@@ -6,8 +6,21 @@ import type {
 } from "../types";
 import { EventBus } from "../events/event-bus";
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-shell";
 
 const MAX_HISTORY_ITEMS = 5;
+const MAX_DETAIL_VALUE_LENGTH = 220;
+
+interface OperationDetail {
+  label: string;
+  value: string;
+}
+
+interface OperationInsight {
+  summary: string;
+  path: string | null;
+  details: OperationDetail[];
+}
 
 export class StatusPanel {
   private eventBus: EventBus;
@@ -21,6 +34,7 @@ export class StatusPanel {
   private isResolvingSelection = false;
   private totalEvents = 0;
   private totalErrors = 0;
+  private currentOpenPath: string | null = null;
 
   // Cached DOM element references
   private readonly elCurrentTool: HTMLElement | null;
@@ -41,6 +55,10 @@ export class StatusPanel {
   private readonly elSelectionOptions: HTMLElement | null;
   private readonly elSelectionActions: HTMLElement | null;
   private readonly elSelectionSubmit: HTMLButtonElement | null;
+  private readonly elOperationInsight: HTMLElement | null;
+  private readonly elOperationSummary: HTMLElement | null;
+  private readonly elOperationOpen: HTMLButtonElement | null;
+  private readonly elOperationDetailList: HTMLElement | null;
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -64,10 +82,15 @@ export class StatusPanel {
     this.elSelectionOptions = document.getElementById("selection-options");
     this.elSelectionActions = document.getElementById("selection-actions");
     this.elSelectionSubmit = document.getElementById("selection-submit") as HTMLButtonElement | null;
+    this.elOperationInsight = document.getElementById("operation-insight");
+    this.elOperationSummary = document.getElementById("operation-summary");
+    this.elOperationOpen = document.getElementById("operation-open") as HTMLButtonElement | null;
+    this.elOperationDetailList = document.getElementById("operation-detail-list");
 
     this.initEventListeners();
     this.initApprovalButtons();
     this.initSelectionActions();
+    this.initOpenAction();
     this.updateConnectionState("Armed");
     this.updateCurrentNote("Ready for Claude hook events");
     this.updateLastHookEvent("Waiting for first hook");
@@ -84,6 +107,7 @@ export class StatusPanel {
         case "pre-tool-use":
           this.updateLastHookEvent(`PreToolUse: ${event.toolName}`);
           this.updateCurrentTool(event.toolName, event.toolInput);
+          this.renderOperationInsight(event.toolName, event.toolInput);
           this.updateSessionId(event.sessionId);
           if (event.toolName === "AskUserQuestion") {
             this.hideApproval();
@@ -106,6 +130,7 @@ export class StatusPanel {
           this.updateLastHookEvent(`${event.hookEventName}: ${event.toolName}`);
           this.hideSelection();
           this.hideApproval();
+          this.renderOperationInsight(event.toolName, event.toolInput, event.toolOutput);
           this.addActionToHistory(event.toolName, event.toolInput, event.isError);
           if (event.isError) {
             this.totalErrors += 1;
@@ -118,18 +143,21 @@ export class StatusPanel {
           this.updateLastHookEvent("Notification");
           this.hideSelection();
           this.hideApproval();
+          this.clearOperationInsight();
           this.updateCurrentNote(event.message);
           break;
         case "stop":
           this.updateLastHookEvent(`Stop: ${event.stopReason}`);
           this.hideSelection();
           this.hideApproval();
+          this.clearOperationInsight();
           this.updateSessionId(event.sessionId);
           this.updateCurrentNote(`Stopped: ${event.stopReason}`);
           break;
         case "approval-requested":
           this.updateLastHookEvent(`Approval: ${event.toolName}`);
           this.hideSelection();
+          this.renderOperationInsight(event.toolName, event.toolInput);
           this.showApproval(event.approvalId, event.toolName, event.toolInput, "", 30);
           break;
         case "approval-resolved":
@@ -154,7 +182,7 @@ export class StatusPanel {
     }
 
     if (this.elCurrentFile) {
-      const filePath = (toolInput.file_path as string) || (toolInput.path as string) || "-";
+      const filePath = this.getPrimaryPath(toolInput) || "-";
       this.elCurrentFile.textContent = filePath;
     }
 
@@ -203,6 +231,7 @@ export class StatusPanel {
     isError: boolean
   ): void {
     let summary = toolName;
+    const path = this.getPrimaryPath(toolInput);
 
     if (toolName === "Bash" && typeof toolInput.command === "string") {
       summary = `Bash: ${toolInput.command.slice(0, 30)}`;
@@ -225,9 +254,175 @@ export class StatusPanel {
       timestamp: Date.now(),
       isError,
     };
+    if (path) {
+      record.path = path;
+    }
 
     this.actionHistory = [record, ...this.actionHistory].slice(0, MAX_HISTORY_ITEMS);
     this.renderHistory();
+  }
+
+  private renderOperationInsight(
+    toolName: string,
+    toolInput: Record<string, unknown>,
+    toolOutput?: string
+  ): void {
+    const insight = this.buildOperationInsight(toolName, toolInput, toolOutput);
+    if (!this.elOperationInsight || !this.elOperationSummary || !this.elOperationDetailList) {
+      return;
+    }
+
+    this.currentOpenPath = insight.path;
+    this.elOperationSummary.textContent = insight.summary;
+    this.elOperationDetailList.replaceChildren(
+      ...insight.details.map((detail) => this.renderOperationDetail(detail))
+    );
+    this.elOperationInsight.hidden = insight.details.length === 0;
+
+    if (this.elOperationOpen) {
+      this.elOperationOpen.hidden = !insight.path;
+      this.elOperationOpen.disabled = !insight.path;
+      this.elOperationOpen.title = insight.path ? `Open ${insight.path}` : "";
+    }
+  }
+
+  private clearOperationInsight(): void {
+    this.currentOpenPath = null;
+    if (this.elOperationInsight) {
+      this.elOperationInsight.hidden = true;
+    }
+    if (this.elOperationDetailList) {
+      this.elOperationDetailList.replaceChildren();
+    }
+    if (this.elOperationOpen) {
+      this.elOperationOpen.hidden = true;
+      this.elOperationOpen.disabled = true;
+      this.elOperationOpen.title = "";
+    }
+  }
+
+  private renderOperationDetail(detail: OperationDetail): HTMLElement {
+    const item = document.createElement("div");
+    item.className = "operation-detail-item";
+
+    const label = document.createElement("span");
+    label.className = "operation-detail-label";
+    label.textContent = detail.label;
+
+    const value = document.createElement("span");
+    value.className = "operation-detail-value";
+    value.textContent = detail.value;
+
+    item.append(label, value);
+    return item;
+  }
+
+  private buildOperationInsight(
+    toolName: string,
+    toolInput: Record<string, unknown>,
+    toolOutput?: string
+  ): OperationInsight {
+    const path = this.getPrimaryPath(toolInput);
+    const details: OperationDetail[] = [];
+
+    this.addDetail(details, "Path", path);
+
+    switch (toolName) {
+      case "Read":
+        this.addDetail(details, "Offset", this.toDisplayValue(toolInput.offset));
+        this.addDetail(details, "Limit", this.toDisplayValue(toolInput.limit));
+        return { summary: "Read file", path, details };
+      case "Write":
+        this.addDetail(details, "Content", this.toDisplayValue(toolInput.content));
+        return { summary: "Write file", path, details };
+      case "Edit":
+        this.addDetail(details, "Before", this.toDisplayValue(toolInput.old_string));
+        this.addDetail(details, "After", this.toDisplayValue(toolInput.new_string));
+        this.addDetail(details, "All", this.toDisplayValue(toolInput.replace_all));
+        return { summary: "Edit file", path, details };
+      case "MultiEdit":
+        this.addMultiEditDetails(details, toolInput.edits);
+        return { summary: "Multi-edit file", path, details };
+      case "Bash":
+        this.addDetail(details, "Command", this.toDisplayValue(toolInput.command));
+        this.addDetail(details, "Reason", this.toDisplayValue(toolInput.description));
+        return { summary: "Run shell command", path: null, details };
+      case "Grep":
+        this.addDetail(details, "Pattern", this.toDisplayValue(toolInput.pattern));
+        this.addDetail(details, "Glob", this.toDisplayValue(toolInput.glob));
+        return { summary: "Search files", path, details };
+      case "Glob":
+        this.addDetail(details, "Pattern", this.toDisplayValue(toolInput.pattern));
+        return { summary: "List matching files", path, details };
+      default:
+        this.addDetail(details, "Input", this.toDisplayValue(toolInput));
+        if (toolOutput) {
+          this.addDetail(details, "Output", this.toDisplayValue(toolOutput));
+        }
+        return { summary: `${toolName} details`, path, details };
+    }
+  }
+
+  private addMultiEditDetails(details: OperationDetail[], edits: unknown): void {
+    if (!Array.isArray(edits)) {
+      return;
+    }
+
+    this.addDetail(details, "Edits", String(edits.length));
+    const preview = edits
+      .slice(0, 2)
+      .map((edit, index) => {
+        if (!edit || typeof edit !== "object") {
+          return `${index + 1}. ${this.toDisplayValue(edit)}`;
+        }
+
+        const item = edit as Record<string, unknown>;
+        return `${index + 1}. ${this.toDisplayValue(item.old_string)} -> ${this.toDisplayValue(item.new_string)}`;
+      })
+      .join("\n");
+
+    this.addDetail(details, "Preview", preview);
+  }
+
+  private addDetail(details: OperationDetail[], label: string, value: string | null): void {
+    if (!value) {
+      return;
+    }
+
+    details.push({ label, value });
+  }
+
+  private getPrimaryPath(toolInput: Record<string, unknown>): string | null {
+    return this.pickFirstString(toolInput, [
+      "file_path",
+      "path",
+      "notebook_path",
+      "cwd",
+    ]);
+  }
+
+  private toDisplayValue(value: unknown): string | null {
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+
+    let text: string;
+    if (typeof value === "string") {
+      text = value;
+    } else if (typeof value === "number" || typeof value === "boolean") {
+      text = String(value);
+    } else {
+      text = JSON.stringify(value);
+    }
+
+    text = text.replace(/\r\n/g, "\n").trim();
+    if (!text) {
+      return null;
+    }
+
+    return text.length > MAX_DETAIL_VALUE_LENGTH
+      ? `${text.slice(0, MAX_DETAIL_VALUE_LENGTH - 3)}...`
+      : text;
   }
 
   private renderHistory(): void {
@@ -249,6 +444,13 @@ export class StatusPanel {
         item.textContent = action.summary;
         if (action.isError) {
           item.style.color = "var(--color-error)";
+        }
+        if (action.path) {
+          item.classList.add("history-item-link");
+          item.title = `Open ${action.path}`;
+          item.addEventListener("click", () => {
+            void this.openPath(action.path as string);
+          });
         }
         return item;
       })
@@ -584,6 +786,28 @@ export class StatusPanel {
     this.elSelectionSubmit?.addEventListener("click", () => {
       void this.submitSelection();
     });
+  }
+
+  private initOpenAction(): void {
+    this.elOperationOpen?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (!this.currentOpenPath) {
+        return;
+      }
+
+      await this.openPath(this.currentOpenPath);
+    });
+  }
+
+  private async openPath(path: string): Promise<void> {
+    try {
+      await open(path);
+    } catch (error) {
+      console.error("Failed to open operation path:", error);
+      this.updateCurrentNote("Failed to open file");
+    }
   }
 
   private showApproval(

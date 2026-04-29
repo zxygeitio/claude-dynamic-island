@@ -63,6 +63,7 @@ export interface ActionRecord {
   summary: string;
   timestamp: number;
   isError: boolean;
+  path?: string;
 }
 
 export interface AppSettings {

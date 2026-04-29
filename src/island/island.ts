@@ -198,6 +198,8 @@ export class IslandController {
       target.closest(".settings-panel") ||
       target.closest(".settings-button") ||
       target.closest(".quit-button") ||
+      target.closest(".operation-insight") ||
+      target.closest(".history-item-link") ||
       target.closest(".island-expand-hint")
     );
   }
