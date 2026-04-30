@@ -125,7 +125,10 @@
             <div class="status-signal-card">
               <div class="signal-card-header">
                 <div class="signal-card-label">Last hook</div>
-                <button class="signal-payload-toggle" id="payload-toggle" type="button">Payload</button>
+                <div class="signal-card-actions">
+                  <button class="signal-copy-button" id="payload-copy" type="button">Copy</button>
+                  <button class="signal-payload-toggle" id="payload-toggle" type="button">Payload</button>
+                </div>
               </div>
               <div class="signal-card-value" id="last-hook-event">No hook yet</div>
               <pre class="signal-payload" id="payload-view" hidden>No payload yet</pre>

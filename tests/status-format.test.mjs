@@ -67,6 +67,18 @@ test("classifies approval risk for read, edit, and destructive shell actions", (
   });
 });
 
+test("formats hook payload for clipboard diagnostics", () => {
+  assert.equal(
+    helpers.formatPayloadForClipboard("PreToolUse: Bash", '{\n  "tool": "Bash"\n}'),
+    'Hook: PreToolUse: Bash\nPayload:\n{\n  "tool": "Bash"\n}'
+  );
+
+  assert.equal(
+    helpers.formatPayloadForClipboard("", ""),
+    "Hook: Unknown\nPayload:\nNo payload yet"
+  );
+});
+
 async function importStatusHelpers() {
   const source = await readFile(new URL("../src/status/status-format.ts", import.meta.url), "utf8");
   const transpiled = ts.transpileModule(source, {

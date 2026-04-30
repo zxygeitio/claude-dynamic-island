@@ -16,6 +16,7 @@ Claude Code is powerful, but its hook events usually live in the terminal. This 
 - browser preview controls for local UI smoke tests and screenshots
 - activity timeline with tool type, elapsed time, and approval state
 - approval risk lens that highlights read-only, write, shell, and destructive commands
+- one-click hook payload copying for issue reports and debugging
 - tray controls with show and exit actions
 - startup hook self-check
 - portable EXE and NSIS installer builds
@@ -44,6 +45,7 @@ Claude Code is powerful, but its hook events usually live in the terminal. This 
 - Browser preview controls for Read, approval, question, error, and completion states
 - Compact activity history with tool-aware badges and elapsed session timing
 - Approval risk classification for inspect-only tools, file writes, shell commands, and destructive shell patterns
+- Copyable hook diagnostics with the current hook label and JSON payload
 - Tray menu with `Show` and `Exit`
 - Startup hook diagnostics so the app can surface configuration issues early
 - Portable release folder with `_up_` resources

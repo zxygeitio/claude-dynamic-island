@@ -12,6 +12,7 @@ import {
   assessApprovalRisk,
   createHistorySummary,
   formatDuration,
+  formatPayloadForClipboard,
   formatRelativeTime,
   getPrimaryPath,
 } from "./status-format";
@@ -46,6 +47,7 @@ export class StatusPanel {
   private currentOpenPath: string | null = null;
   private payloadVisible = false;
   private lastPayloadText = "No payload yet";
+  private lastHookLabel = "No hook yet";
   private sessionStartedAt: number | null = null;
   private lastEventAt: number | null = null;
 
@@ -79,6 +81,7 @@ export class StatusPanel {
   private readonly elOperationOpen: HTMLButtonElement | null;
   private readonly elOperationDetailList: HTMLElement | null;
   private readonly elPayloadToggle: HTMLButtonElement | null;
+  private readonly elPayloadCopy: HTMLButtonElement | null;
   private readonly elPayloadView: HTMLElement | null;
 
   constructor(eventBus: EventBus) {
@@ -114,6 +117,7 @@ export class StatusPanel {
     this.elOperationOpen = document.getElementById("operation-open") as HTMLButtonElement | null;
     this.elOperationDetailList = document.getElementById("operation-detail-list");
     this.elPayloadToggle = document.getElementById("payload-toggle") as HTMLButtonElement | null;
+    this.elPayloadCopy = document.getElementById("payload-copy") as HTMLButtonElement | null;
     this.elPayloadView = document.getElementById("payload-view");
 
     this.initEventListeners();
@@ -121,6 +125,7 @@ export class StatusPanel {
     this.initSelectionActions();
     this.initOpenAction();
     this.initPayloadToggle();
+    this.initPayloadCopy();
     this.updateConnectionState("Armed");
     this.updateCurrentNote("Ready for Claude hook events");
     this.updateLastHookEvent("Waiting for first hook");
@@ -275,6 +280,7 @@ export class StatusPanel {
   }
 
   private updateLastHookEvent(value: string): void {
+    this.lastHookLabel = value;
     if (this.elLastHookEvent) {
       this.elLastHookEvent.textContent = value;
     }
@@ -904,6 +910,44 @@ export class StatusPanel {
       this.payloadVisible = !this.payloadVisible;
       this.renderPayloadView();
     });
+  }
+
+  private initPayloadCopy(): void {
+    this.elPayloadCopy?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const text = formatPayloadForClipboard(this.lastHookLabel, this.lastPayloadText);
+      const copied = await this.copyText(text);
+      this.updateCurrentNote(copied ? "Hook payload copied" : "Failed to copy hook payload");
+    });
+  }
+
+  private async copyText(text: string): Promise<boolean> {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch {
+      // Fall through to the textarea fallback for WebView/browser edge cases.
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "true");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    try {
+      return document.execCommand("copy");
+    } catch {
+      return false;
+    } finally {
+      textarea.remove();
+    }
   }
 
   private async openPath(path: string): Promise<void> {

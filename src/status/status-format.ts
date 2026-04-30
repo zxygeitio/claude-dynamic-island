@@ -180,6 +180,12 @@ export function assessApprovalRisk(
   };
 }
 
+export function formatPayloadForClipboard(hookLabel: string, payloadText: string): string {
+  const hook = hookLabel.trim() || "Unknown";
+  const payload = payloadText.trim() || "No payload yet";
+  return `Hook: ${hook}\nPayload:\n${payload}`;
+}
+
 function compactPath(path: string): string {
   const parts = path.replace(/\\/g, "/").split("/").filter(Boolean);
   return parts.slice(-2).join("/") || path;
