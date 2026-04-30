@@ -4,6 +4,10 @@ import { invoke } from "@tauri-apps/api/core";
 import type { CharacterOption, RuntimeSettings } from "../types";
 import { isTauri } from "../utils/env";
 
+const AUTO_APPROVE_READ_ONLY_TOOLS = ["Read", "Grep", "Glob"];
+const MIN_APPROVAL_TIMEOUT_SECONDS = 1;
+const MAX_APPROVAL_TIMEOUT_SECONDS = 600;
+
 /**
  * Manages the in-island settings panel UI: character selection,
  * auto-approve configuration, hooks re-check, and save actions.
@@ -136,11 +140,8 @@ export class SettingsPanelController {
       event.preventDefault();
       event.stopPropagation();
 
-      const timeout = Math.max(1, Number(this.timeoutInput?.value || "30"));
-      const autoApproveTools = (this.autoApproveInput?.value || "")
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
+      const timeout = clampApprovalTimeout(Number(this.timeoutInput?.value || "30"));
+      const autoApproveTools = sanitizeAutoApproveTools(this.autoApproveInput?.value || "");
       const selectedCharacter = this.characterSelect?.value || this.activeCharacterRef.value;
 
       const characterChanged = selectedCharacter !== this.activeCharacterRef.value;
@@ -190,4 +191,26 @@ export class SettingsPanelController {
       await this.runHooksSelfCheck(true);
     });
   }
+}
+
+function sanitizeAutoApproveTools(value: string): string[] {
+  const requested = value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return AUTO_APPROVE_READ_ONLY_TOOLS.filter((allowed) =>
+    requested.some((item) => item.toLowerCase() === allowed.toLowerCase())
+  );
+}
+
+function clampApprovalTimeout(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 30;
+  }
+
+  return Math.min(
+    MAX_APPROVAL_TIMEOUT_SECONDS,
+    Math.max(MIN_APPROVAL_TIMEOUT_SECONDS, Math.floor(value))
+  );
 }

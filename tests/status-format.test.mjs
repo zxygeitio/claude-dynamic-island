@@ -105,6 +105,15 @@ test("formats hook payload for clipboard diagnostics", () => {
   );
 });
 
+test("blocks unsafe open targets from hook-controlled paths", () => {
+  assert.equal(helpers.isSafeLocalOpenPath("D:/repo/src/main.ts"), true);
+  assert.equal(helpers.isSafeLocalOpenPath("README.md"), true);
+  assert.equal(helpers.isSafeLocalOpenPath("https://example.com"), false);
+  assert.equal(helpers.isSafeLocalOpenPath("file:///C:/Windows/System32/calc.exe"), false);
+  assert.equal(helpers.isSafeLocalOpenPath("\\\\server\\share\\payload.lnk"), false);
+  assert.equal(helpers.isSafeLocalOpenPath("../outside.txt"), false);
+});
+
 async function importStatusHelpers() {
   const source = await readFile(new URL("../src/status/status-format.ts", import.meta.url), "utf8");
   const transpiled = ts.transpileModule(source, {

@@ -1,7 +1,7 @@
 use axum::{
     Router,
     routing::post,
-    extract::State,
+    extract::{DefaultBodyLimit, State},
     http::StatusCode,
     Json,
 };
@@ -16,6 +16,7 @@ use crate::selection::gate::SelectionGate;
 use crate::server::models::*;
 
 const SELECTION_TIMEOUT_SECS: u64 = 300;
+const MAX_HOOK_BODY_BYTES: usize = 1024 * 1024;
 
 pub fn create_router(
     app_handle: tauri::AppHandle,
@@ -29,6 +30,7 @@ pub fn create_router(
         .route("/hooks/post-tool-use-failure", post(post_tool_use_failure_handler))
         .route("/hooks/notification", post(notification_handler))
         .route("/hooks/stop", post(stop_handler))
+        .layer(DefaultBodyLimit::max(MAX_HOOK_BODY_BYTES))
         .with_state(AppState {
             app_handle,
             gate,

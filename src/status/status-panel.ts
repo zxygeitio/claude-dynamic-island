@@ -15,6 +15,7 @@ import {
   formatPayloadForClipboard,
   formatRelativeTime,
   getPrimaryPath,
+  isSafeLocalOpenPath,
 } from "./status-format";
 
 const MAX_HISTORY_ITEMS = 7;
@@ -995,6 +996,11 @@ export class StatusPanel {
   }
 
   private async openPath(path: string): Promise<void> {
+    if (!isSafeLocalOpenPath(path)) {
+      this.updateCurrentNote("Blocked unsafe open target");
+      return;
+    }
+
     if (!isTauri()) {
       this.updateCurrentNote("Open file is available in the desktop app");
       return;

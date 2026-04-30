@@ -13,7 +13,7 @@ export class CharacterRenderer {
   private lastTimestamp = 0;
   private animFrameId = 0;
   private pingPongForward = true;
-  /** Dirty flag — only repaint when the displayed frame actually changed. */
+  /** Dirty flag: only repaint when the displayed frame actually changed. */
   private dirty = true;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -21,7 +21,7 @@ export class CharacterRenderer {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Failed to get 2D context");
     this.ctx = ctx;
-    // Set once — no need to reassign every frame.
+    // Set once; no need to reassign every frame.
     this.ctx.imageSmoothingEnabled = false;
   }
 

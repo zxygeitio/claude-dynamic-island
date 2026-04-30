@@ -2,6 +2,7 @@ import type { CharacterManifest } from "../types";
 import defaultCatSpritesheetUrl from "../../characters/default-cat/spritesheet.png";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { isTauri } from "../utils/env";
+import { validateCharacterAssetPath } from "./manifest-security";
 
 const DEFAULT_CHARACTER_NAME = "default-cat";
 const EMBEDDED_DEFAULT_MANIFEST: CharacterManifest = {
@@ -119,6 +120,7 @@ export class SpriteLoader {
   private validateManifest(manifest: CharacterManifest): void {
     if (!manifest.name) throw new Error("Manifest missing 'name'");
     if (!manifest.spritesheet) throw new Error("Manifest missing 'spritesheet'");
+    validateCharacterAssetPath(manifest.spritesheet);
     if (!manifest.frameWidth || manifest.frameWidth <= 0) throw new Error("Invalid frameWidth");
     if (!manifest.frameHeight || manifest.frameHeight <= 0) throw new Error("Invalid frameHeight");
     if (!manifest.animations.idle) throw new Error("Manifest missing required 'idle' animation");

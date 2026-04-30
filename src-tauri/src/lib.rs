@@ -26,6 +26,9 @@ const PORT_SEARCH_SPAN: u16 = 24;
 const TRAY_SHOW_ID: &str = "tray-show";
 const TRAY_RECHECK_ID: &str = "tray-recheck";
 const TRAY_EXIT_ID: &str = "tray-exit";
+const MIN_APPROVAL_TIMEOUT_SECONDS: u64 = 1;
+const MAX_APPROVAL_TIMEOUT_SECONDS: u64 = 600;
+const AUTO_APPROVE_READ_ONLY_TOOLS: &[&str] = &["Read", "Grep", "Glob"];
 
 #[derive(Clone)]
 struct RuntimeContext {
@@ -91,13 +94,28 @@ async fn update_runtime_settings(
     payload: RuntimeSettingsPayload,
 ) -> Result<RuntimeSettingsPayload, String> {
     let mut settings = runtime_settings.lock().await;
-    settings.auto_approve_tools = payload.auto_approve_tools;
-    settings.approval_timeout_seconds = payload.approval_timeout_seconds.max(1);
+    settings.auto_approve_tools = sanitize_auto_approve_tools(payload.auto_approve_tools);
+    settings.approval_timeout_seconds = clamp_approval_timeout(payload.approval_timeout_seconds);
 
     Ok(RuntimeSettingsPayload {
         auto_approve_tools: settings.auto_approve_tools.clone(),
         approval_timeout_seconds: settings.approval_timeout_seconds,
     })
+}
+
+fn sanitize_auto_approve_tools(tools: Vec<String>) -> Vec<String> {
+    let mut sanitized = Vec::new();
+    for allowed in AUTO_APPROVE_READ_ONLY_TOOLS {
+        if tools.iter().any(|tool| tool.eq_ignore_ascii_case(allowed)) {
+            sanitized.push((*allowed).to_string());
+        }
+    }
+
+    sanitized
+}
+
+fn clamp_approval_timeout(timeout: u64) -> u64 {
+    timeout.clamp(MIN_APPROVAL_TIMEOUT_SECONDS, MAX_APPROVAL_TIMEOUT_SECONDS)
 }
 
 #[tauri::command]
@@ -479,6 +497,30 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{clamp_approval_timeout, sanitize_auto_approve_tools};
+
+    #[test]
+    fn sanitize_auto_approve_tools_keeps_only_read_only_tools() {
+        let sanitized = sanitize_auto_approve_tools(vec![
+            "read".to_string(),
+            "Bash".to_string(),
+            "Edit".to_string(),
+            "Glob".to_string(),
+        ]);
+
+        assert_eq!(sanitized, vec!["Read".to_string(), "Glob".to_string()]);
+    }
+
+    #[test]
+    fn clamp_approval_timeout_bounds_runtime_configuration() {
+        assert_eq!(clamp_approval_timeout(0), 1);
+        assert_eq!(clamp_approval_timeout(30), 30);
+        assert_eq!(clamp_approval_timeout(9999), 600);
+    }
 }
 
 fn resolve_available_server_port(preferred_port: u16) -> u16 {

@@ -256,6 +256,28 @@ export function formatPayloadForClipboard(hookLabel: string, payloadText: string
   return `Hook: ${hook}\nPayload:\n${payload}`;
 }
 
+export function isSafeLocalOpenPath(path: string): boolean {
+  const trimmed = path.trim();
+  if (!trimmed || /[\u0000-\u001f]/.test(trimmed)) {
+    return false;
+  }
+
+  const normalized = trimmed.replace(/\\/g, "/");
+  if (normalized.startsWith("//")) {
+    return false;
+  }
+
+  if (/^[a-z][a-z0-9+.-]*:/i.test(normalized) && !/^[a-z]:\//i.test(normalized)) {
+    return false;
+  }
+
+  if (normalized.split("/").includes("..")) {
+    return false;
+  }
+
+  return /^[a-z]:\//i.test(normalized) || !normalized.startsWith("/");
+}
+
 function compactPath(path: string): string {
   const parts = path.replace(/\\/g, "/").split("/").filter(Boolean);
   return parts.slice(-2).join("/") || path;
