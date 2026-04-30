@@ -1,4 +1,5 @@
 export type ActivityTone = "neutral" | "info" | "success" | "danger" | "waiting";
+export type ApprovalRiskLevel = "safe" | "review" | "danger";
 
 export interface HistorySummary {
   summary: string;
@@ -6,7 +7,18 @@ export interface HistorySummary {
   tone: ActivityTone;
 }
 
+export interface ApprovalRisk {
+  level: ApprovalRiskLevel;
+  label: string;
+  signal: string;
+  reason: string;
+}
+
 const PATH_KEYS = ["file_path", "path", "notebook_path", "cwd"];
+const READ_ONLY_TOOLS = new Set(["Read", "Grep", "Glob"]);
+const WRITE_TOOLS = new Set(["Write", "Edit", "MultiEdit"]);
+const DESTRUCTIVE_COMMAND_PATTERN =
+  /\b(rm\s+-rf|remove-item|del\s+\/[fsq]|rmdir\s+\/s|git\s+reset\s+--hard|git\s+clean\s+-fd|format|mkfs|shutdown|npm\s+publish|cargo\s+publish)\b/i;
 
 export function getPrimaryPath(toolInput: Record<string, unknown>): string | null {
   for (const key of PATH_KEYS) {
@@ -108,6 +120,64 @@ export function getActivityTone(toolName: string, isError: boolean): ActivityTon
   }
 
   return "neutral";
+}
+
+export function assessApprovalRisk(
+  toolName: string,
+  toolInput: Record<string, unknown>
+): ApprovalRisk {
+  if (READ_ONLY_TOOLS.has(toolName)) {
+    return {
+      level: "safe",
+      label: "Low Risk",
+      signal: "READ",
+      reason: "Inspect-only tool",
+    };
+  }
+
+  if (toolName === "Bash") {
+    const command = typeof toolInput.command === "string" ? toolInput.command : "";
+    if (DESTRUCTIVE_COMMAND_PATTERN.test(command)) {
+      return {
+        level: "danger",
+        label: "High Risk",
+        signal: "SHELL",
+        reason: "Destructive shell command",
+      };
+    }
+
+    return {
+      level: "review",
+      label: "Review",
+      signal: "SHELL",
+      reason: "Shell command requires attention",
+    };
+  }
+
+  if (WRITE_TOOLS.has(toolName)) {
+    return {
+      level: "review",
+      label: "Review",
+      signal: "WRITE",
+      reason: "Will modify workspace files",
+    };
+  }
+
+  if (toolName === "AskUserQuestion") {
+    return {
+      level: "safe",
+      label: "Low Risk",
+      signal: "INPUT",
+      reason: "Human input request",
+    };
+  }
+
+  return {
+    level: "review",
+    label: "Review",
+    signal: "TOOL",
+    reason: "Check tool input before approving",
+  };
 }
 
 function compactPath(path: string): string {

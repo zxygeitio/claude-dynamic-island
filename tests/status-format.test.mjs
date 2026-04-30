@@ -44,6 +44,29 @@ test("formats compact relative and elapsed times", () => {
   assert.equal(helpers.formatDuration(null, now), "0s");
 });
 
+test("classifies approval risk for read, edit, and destructive shell actions", () => {
+  assert.deepEqual(helpers.assessApprovalRisk("Read", { file_path: "README.md" }), {
+    level: "safe",
+    label: "Low Risk",
+    signal: "READ",
+    reason: "Inspect-only tool",
+  });
+
+  assert.deepEqual(helpers.assessApprovalRisk("Edit", { file_path: "src/main.ts" }), {
+    level: "review",
+    label: "Review",
+    signal: "WRITE",
+    reason: "Will modify workspace files",
+  });
+
+  assert.deepEqual(helpers.assessApprovalRisk("Bash", { command: "git reset --hard HEAD" }), {
+    level: "danger",
+    label: "High Risk",
+    signal: "SHELL",
+    reason: "Destructive shell command",
+  });
+});
+
 async function importStatusHelpers() {
   const source = await readFile(new URL("../src/status/status-format.ts", import.meta.url), "utf8");
   const transpiled = ts.transpileModule(source, {

@@ -12,7 +12,7 @@
   --island-radius: 26px;
   --island-radius-expanded: 28px;
   --island-collapsed-height: 52px;
-  --island-expanded-height: 432px;
+  --island-expanded-height: 468px;
   --island-width: 364px;
   --island-width-expanded: 520px;
   --text-primary: rgba(255, 255, 255, 0.96);
@@ -719,12 +719,20 @@ body[data-tauri] .island-action-button {
   backdrop-filter: blur(14px);
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 body[data-approval] .status-details {
   border-color: rgba(255, 200, 77, 0.16);
   background:
     linear-gradient(180deg, rgba(255, 200, 77, 0.08), rgba(255, 255, 255, 0.02)),
+    rgba(255, 255, 255, 0.018);
+}
+
+body[data-approval-risk="danger"] .status-details {
+  border-color: rgba(255, 123, 115, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 123, 115, 0.09), rgba(255, 255, 255, 0.018)),
     rgba(255, 255, 255, 0.018);
 }
 
@@ -874,11 +882,90 @@ body[data-approval] .status-details {
   font-size: 9px;
 }
 
+.approval-risk-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 7px;
+  padding: 7px 9px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 200, 77, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 200, 77, 0.1), rgba(255, 255, 255, 0.018)),
+    rgba(255, 255, 255, 0.018);
+}
+
+.approval-risk-card[hidden] {
+  display: none;
+}
+
+.approval-risk-card[data-risk="safe"] {
+  border-color: rgba(126, 242, 184, 0.16);
+  background:
+    linear-gradient(180deg, rgba(126, 242, 184, 0.08), rgba(255, 255, 255, 0.018)),
+    rgba(255, 255, 255, 0.018);
+}
+
+.approval-risk-card[data-risk="danger"] {
+  border-color: rgba(255, 123, 115, 0.22);
+  background:
+    linear-gradient(180deg, rgba(255, 123, 115, 0.12), rgba(255, 255, 255, 0.018)),
+    rgba(255, 255, 255, 0.018);
+}
+
+.approval-risk-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.approval-risk-label {
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.approval-risk-reason {
+  min-width: 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 9px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.approval-risk-signal {
+  flex-shrink: 0;
+  color: rgba(255, 232, 176, 0.95);
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  padding: 5px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 200, 77, 0.18);
+  background: rgba(255, 200, 77, 0.1);
+}
+
+.approval-risk-card[data-risk="safe"] .approval-risk-signal {
+  color: rgba(179, 255, 218, 0.95);
+  border-color: rgba(126, 242, 184, 0.16);
+  background: rgba(126, 242, 184, 0.08);
+}
+
+.approval-risk-card[data-risk="danger"] .approval-risk-signal {
+  color: rgba(255, 194, 190, 0.98);
+  border-color: rgba(255, 123, 115, 0.22);
+  background: rgba(255, 123, 115, 0.1);
+}
+
 .operation-insight {
   display: grid;
-  gap: 6px;
-  margin-top: 8px;
-  padding-top: 8px;
+  gap: 5px;
+  margin-top: 7px;
+  padding-top: 7px;
   border-top: 1px solid rgba(255, 255, 255, 0.055);
 }
 
@@ -927,7 +1014,7 @@ body[data-approval] .status-details {
 .operation-detail-list {
   display: grid;
   gap: 4px;
-  max-height: 66px;
+  max-height: 72px;
   overflow-y: auto;
   padding-right: 3px;
 }

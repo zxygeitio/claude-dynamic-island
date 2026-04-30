@@ -9,6 +9,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-shell";
 import { isTauri } from "../utils/env";
 import {
+  assessApprovalRisk,
   createHistorySummary,
   formatDuration,
   formatRelativeTime,
@@ -61,6 +62,10 @@ export class StatusPanel {
   private readonly elLastHookEvent: HTMLElement | null;
   private readonly elApprovalTimer: HTMLElement | null;
   private readonly elApprovalButtons: HTMLElement | null;
+  private readonly elApprovalRiskCard: HTMLElement | null;
+  private readonly elApprovalRiskLabel: HTMLElement | null;
+  private readonly elApprovalRiskReason: HTMLElement | null;
+  private readonly elApprovalRiskSignal: HTMLElement | null;
   private readonly elBtnApprove: HTMLButtonElement | null;
   private readonly elBtnDeny: HTMLButtonElement | null;
   private readonly elHistoryList: HTMLElement | null;
@@ -92,6 +97,10 @@ export class StatusPanel {
     this.elLastHookEvent = document.getElementById("last-hook-event");
     this.elApprovalTimer = document.getElementById("approval-timer");
     this.elApprovalButtons = document.getElementById("approval-buttons");
+    this.elApprovalRiskCard = document.getElementById("approval-risk-card");
+    this.elApprovalRiskLabel = document.getElementById("approval-risk-label");
+    this.elApprovalRiskReason = document.getElementById("approval-risk-reason");
+    this.elApprovalRiskSignal = document.getElementById("approval-risk-signal");
     this.elBtnApprove = document.getElementById("btn-approve") as HTMLButtonElement | null;
     this.elBtnDeny = document.getElementById("btn-deny") as HTMLButtonElement | null;
     this.elHistoryList = document.getElementById("history-list");
@@ -926,6 +935,7 @@ export class StatusPanel {
       timestamp: Date.now(),
     };
     document.body.dataset.approval = toolName || "true";
+    this.renderApprovalRisk(toolName, toolInput);
     this.isResolvingApproval = false;
     this.setApprovalButtonsDisabled(false);
 
@@ -951,6 +961,8 @@ export class StatusPanel {
   private hideApproval(): void {
     this.currentApproval = null;
     delete document.body.dataset.approval;
+    delete document.body.dataset.approvalRisk;
+    this.hideApprovalRisk();
     if (this.elApprovalButtons) {
       this.elApprovalButtons.classList.remove("visible");
     }
@@ -965,6 +977,32 @@ export class StatusPanel {
   private updateApprovalTimer(): void {
     if (this.elApprovalTimer) {
       this.elApprovalTimer.textContent = `${this.approvalTimeLeft}s`;
+    }
+  }
+
+  private renderApprovalRisk(toolName: string, toolInput: Record<string, unknown>): void {
+    const risk = assessApprovalRisk(toolName, toolInput);
+    document.body.dataset.approvalRisk = risk.level;
+
+    if (this.elApprovalRiskCard) {
+      this.elApprovalRiskCard.hidden = false;
+      this.elApprovalRiskCard.dataset.risk = risk.level;
+    }
+    if (this.elApprovalRiskLabel) {
+      this.elApprovalRiskLabel.textContent = risk.label;
+    }
+    if (this.elApprovalRiskReason) {
+      this.elApprovalRiskReason.textContent = risk.reason;
+    }
+    if (this.elApprovalRiskSignal) {
+      this.elApprovalRiskSignal.textContent = risk.signal;
+    }
+  }
+
+  private hideApprovalRisk(): void {
+    if (this.elApprovalRiskCard) {
+      this.elApprovalRiskCard.hidden = true;
+      delete this.elApprovalRiskCard.dataset.risk;
     }
   }
 

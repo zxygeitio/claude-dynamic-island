@@ -33,7 +33,7 @@ export function initPreviewControls(eventBus: EventBus): void {
       type: "pre-tool-use",
       toolName: "Bash",
       toolInput: {
-        command: "npm run build",
+        command: "git reset --hard HEAD",
         cwd: "D:/workspace/claude-dynamic-island",
       },
       approvalId: createPreviewId("approval"),

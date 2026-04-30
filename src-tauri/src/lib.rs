@@ -18,7 +18,7 @@ use tokio::sync::Mutex;
 const COLLAPSED_WIDTH: f64 = 364.0;
 const COLLAPSED_HEIGHT: f64 = 52.0;
 const EXPANDED_WIDTH: f64 = 520.0;
-const EXPANDED_HEIGHT: f64 = 432.0;
+const EXPANDED_HEIGHT: f64 = 468.0;
 const COLLAPSED_RADIUS: i32 = 26;
 const EXPANDED_RADIUS: i32 = 28;
 const TOP_MARGIN: f64 = 0.0;
