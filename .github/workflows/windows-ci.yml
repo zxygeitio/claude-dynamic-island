@@ -25,8 +25,18 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci
+          python -m pip install -r requirements.txt
+
+      - name: Frontend unit tests
+        run: npm test
 
       - name: TypeScript and frontend build
         run: npm run build
@@ -38,3 +48,6 @@ jobs:
       - name: Rust tests
         run: cargo test
         working-directory: src-tauri
+
+      - name: Build and verify Windows exe release
+        run: npm run build:release

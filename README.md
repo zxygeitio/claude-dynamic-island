@@ -65,6 +65,7 @@ Claude Code is powerful, but its hook events usually live in the terminal. This 
 
 - Node.js 18+
 - Rust stable
+- Python 3.10+ with dependencies from `requirements.txt`
 - Windows 11
 
 ### Development
@@ -74,11 +75,13 @@ npm install
 npm run tauri dev
 ```
 
-### Production Build
+### Verified Windows Release
 
 ```bash
-npm run tauri build
+npm run build:release
 ```
+
+This is the release path used by CI. It builds the Tauri app, creates the NSIS installer, copies the portable executable into `release/`, and fails if the expected `.exe` files are missing or invalid.
 
 ### Portable Release Folder
 

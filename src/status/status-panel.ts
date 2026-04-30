@@ -6,7 +6,6 @@ import type {
 } from "../types";
 import { EventBus } from "../events/event-bus";
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-shell";
 import { isTauri } from "../utils/env";
 import {
   assessApprovalRisk,
@@ -951,7 +950,13 @@ export class StatusPanel {
   }
 
   private async openPath(path: string): Promise<void> {
+    if (!isTauri()) {
+      this.updateCurrentNote("Open file is available in the desktop app");
+      return;
+    }
+
     try {
+      const { open } = await import("@tauri-apps/plugin-shell");
       await open(path);
     } catch (error) {
       console.error("Failed to open operation path:", error);

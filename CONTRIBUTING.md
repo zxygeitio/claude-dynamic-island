@@ -11,6 +11,7 @@ Requirements:
 
 - Node.js 18+
 - Rust stable
+- Python 3.10+ with dependencies from `requirements.txt`
 - Windows 11
 
 ## Verification
@@ -18,6 +19,8 @@ Requirements:
 Run these before opening a pull request:
 
 ```bash
+python -m pip install -r requirements.txt
+npm test
 npx tsc --noEmit
 cd src-tauri && cargo check && cargo test
 ```

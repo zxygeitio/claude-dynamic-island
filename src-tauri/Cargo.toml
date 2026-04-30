@@ -23,6 +23,4 @@ serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 axum = "0.7"
 uuid = { version = "1", features = ["v4"] }
-window-vibrancy = "0.5"
-raw-window-handle = "0.6"
 windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Gdi"] }

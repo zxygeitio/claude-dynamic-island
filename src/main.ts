@@ -15,7 +15,7 @@ import { isTauri } from "./utils/env";
 
 async function init() {
   try {
-    // ── Tauri window background ──────────────────────────────────────────
+    // Keep native and WebView backgrounds aligned to avoid a white first frame.
     if (isTauri()) {
       document.body.dataset.tauri = "true";
       try {
@@ -29,8 +29,7 @@ async function init() {
         console.error("Failed to apply transparent Tauri background:", error);
       }
     }
-
-    // ── Core services ────────────────────────────────────────────────────
+    // Core services.
     const eventBus = new EventBus();
     const settingsStore = new SettingsStore();
     await settingsStore.load();
@@ -64,21 +63,18 @@ async function init() {
         return false;
       }
     };
-
-    // ── Hooks status helper (shared between orchestrator & settings) ────
+    // Hooks status helper shared between orchestrator and settings.
     const hooksStatusEl = document.getElementById("settings-hooks-status");
     const updateHooksStatus = (ok: boolean, message: string): void => {
       if (!hooksStatusEl) return;
       hooksStatusEl.textContent = message;
       hooksStatusEl.dataset.state = ok ? "ok" : "error";
     };
-
-    // ── Event wiring ─────────────────────────────────────────────────────
+    // Event wiring.
     if (isTauri()) {
       await eventBus.listenTauriEvents();
     }
-
-    // Event orchestrator handles event→island/stateMachine mapping
+    // Event orchestrator handles event-to-island/state-machine mapping.
     new EventOrchestrator(eventBus, island, stateMachine, updateHooksStatus);
 
     // Settings panel controller
@@ -89,8 +85,7 @@ async function init() {
       applyCharacter,
       updateHooksStatus,
     );
-
-    // ── Load initial character ───────────────────────────────────────────
+    // Load initial character.
     try {
       const ok = await applyCharacter(settings.selectedCharacter);
       if (!ok) {
@@ -111,13 +106,11 @@ async function init() {
         }
       }
     }
-
-    // ── Connect state machine → renderer ─────────────────────────────────
+    // Connect state machine to renderer.
     stateMachine.onStateChange((state, transition) => {
       renderer.playAnimation(state, transition as TransitionType);
     });
-
-    // ── Startup self-check & runtime settings sync ───────────────────────
+    // Startup self-check and runtime settings sync.
     if (isTauri()) {
       try {
         await invoke<RuntimeSettings>("update_runtime_settings", {
@@ -133,8 +126,7 @@ async function init() {
     } else {
       updateHooksStatus(true, "Browser preview mode");
     }
-
-    // ── UI interactions ──────────────────────────────────────────────────
+    // UI interactions.
     document.getElementById("expand-hint")?.addEventListener("click", () => {
       island.toggle();
     });
@@ -153,11 +145,9 @@ async function init() {
     document.getElementById("island")?.addEventListener("dblclick", () => {
       island.toggle();
     });
-
-    // ── Render loop ──────────────────────────────────────────────────────
+    // Render loop.
     renderer.startRenderLoop();
-
-    // ── Idle → sleep timer ───────────────────────────────────────────────
+    // Idle-to-sleep timer.
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
     const resetIdleTimer = () => {
       if (idleTimer) clearTimeout(idleTimer);

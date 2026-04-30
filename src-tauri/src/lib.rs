@@ -118,9 +118,8 @@ fn list_available_characters(app: tauri::AppHandle) -> Result<Vec<CharacterOptio
         if !root.exists() {
             continue;
         }
-
-        // Build a name→directory-id map in a single pass instead of
-        // re-scanning the directory for every manifest (was O(N×M)).
+        // Build a name-to-directory-id map in a single pass instead of
+        // re-scanning the directory for every manifest.
         let mut name_to_dir_id: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
         if let Ok(entries) = fs::read_dir(&root) {
