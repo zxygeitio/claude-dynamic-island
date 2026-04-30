@@ -67,6 +67,32 @@ test("classifies approval risk for read, edit, and destructive shell actions", (
   });
 });
 
+test("describes tool intent for product-level decisions", () => {
+  assert.deepEqual(helpers.describeToolIntent("Read", { file_path: "D:/repo/src/main.ts" }), {
+    label: "Inspecting context",
+    description: "Claude is reading a file before deciding the next move.",
+    nextAction: "No approval needed unless your hook policy blocks read-only tools.",
+    scope: "src/main.ts",
+  });
+
+  assert.deepEqual(helpers.describeToolIntent("AskUserQuestion", {}), {
+    label: "Input required",
+    description: "Claude is blocked until you choose an answer.",
+    nextAction: "Answer directly inside the island to continue the session.",
+    scope: "Decision",
+  });
+
+  assert.deepEqual(
+    helpers.describeToolIntent("Bash", { command: "git reset --hard HEAD" }),
+    {
+      label: "Dangerous command",
+      description: "git reset --hard HEAD",
+      nextAction: "Deny unless you explicitly requested this destructive operation.",
+      scope: "Workspace",
+    }
+  );
+});
+
 test("formats hook payload for clipboard diagnostics", () => {
   assert.equal(
     helpers.formatPayloadForClipboard("PreToolUse: Bash", '{\n  "tool": "Bash"\n}'),

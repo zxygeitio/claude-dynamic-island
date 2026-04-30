@@ -14,6 +14,13 @@ export interface ApprovalRisk {
   reason: string;
 }
 
+export interface ToolIntent {
+  label: string;
+  description: string;
+  nextAction: string;
+  scope: string;
+}
+
 const PATH_KEYS = ["file_path", "path", "notebook_path", "cwd"];
 const READ_ONLY_TOOLS = new Set(["Read", "Grep", "Glob"]);
 const WRITE_TOOLS = new Set(["Write", "Edit", "MultiEdit"]);
@@ -178,6 +185,69 @@ export function assessApprovalRisk(
     signal: "TOOL",
     reason: "Check tool input before approving",
   };
+}
+
+export function describeToolIntent(
+  toolName: string,
+  toolInput: Record<string, unknown>
+): ToolIntent {
+  const path = getPrimaryPath(toolInput);
+  const scope = path ? compactPath(path) : "Workspace";
+
+  switch (toolName) {
+    case "Read":
+      return {
+        label: "Inspecting context",
+        description: path ? "Claude is reading a file before deciding the next move." : "Claude is reading context.",
+        nextAction: "No approval needed unless your hook policy blocks read-only tools.",
+        scope,
+      };
+    case "Grep":
+    case "Glob":
+      return {
+        label: "Searching workspace",
+        description: "Claude is mapping the codebase before making a change.",
+        nextAction: "Use this to verify it is searching the right area.",
+        scope,
+      };
+    case "Edit":
+    case "MultiEdit":
+    case "Write":
+      return {
+        label: "Preparing file change",
+        description: path ? "Claude wants to modify a file. Review the target and preview." : "Claude wants to modify project files.",
+        nextAction: "Approve only if the target and change intent match your goal.",
+        scope,
+      };
+    case "Bash": {
+      const command = typeof toolInput.command === "string" ? toolInput.command : "";
+      const destructive = DESTRUCTIVE_COMMAND_PATTERN.test(command);
+      return {
+        label: destructive ? "Dangerous command" : "Running command",
+        description: command
+          ? truncateSingleLine(command, 96)
+          : "Claude wants to run a shell command.",
+        nextAction: destructive
+          ? "Deny unless you explicitly requested this destructive operation."
+          : "Check the command before approving.",
+        scope,
+      };
+    }
+    case "AskUserQuestion":
+      return {
+        label: "Input required",
+        description: "Claude is blocked until you choose an answer.",
+        nextAction: "Answer directly inside the island to continue the session.",
+        scope: "Decision",
+      };
+    default:
+      return {
+        label: `${toolName || "Tool"} activity`,
+        description: "Claude sent a hook event for this tool.",
+        nextAction: "Review the tool payload if the intent is unclear.",
+        scope,
+      };
+  }
 }
 
 export function formatPayloadForClipboard(hookLabel: string, payloadText: string): string {

@@ -77,6 +77,15 @@
               </div>
             </div>
             <div class="status-details">
+              <div class="action-intent-card" id="action-intent-card">
+                <div class="action-intent-topline">
+                  <span class="action-intent-kicker">Now</span>
+                  <span class="action-intent-scope" id="action-intent-scope">Workspace</span>
+                </div>
+                <div class="action-intent-title" id="action-intent-label">Standing by</div>
+                <div class="action-intent-description" id="action-intent-description">Waiting for Claude hook events.</div>
+                <div class="action-intent-next" id="action-intent-next">Open Claude Code and run a tool to see live context.</div>
+              </div>
               <div class="detail-row">
                 <span class="detail-label">Tool:</span>
                 <span class="detail-value" id="current-tool">-</span>
@@ -122,6 +131,19 @@
                 <span class="overview-chip-value" id="active-duration">0s</span>
               </div>
             </div>
+            <div class="selection-panel" id="selection-panel">
+              <div class="selection-label">Question</div>
+              <div class="selection-prompt" id="selection-prompt">Waiting for Claude prompt...</div>
+              <div class="selection-options" id="selection-options"></div>
+              <div class="selection-actions" id="selection-actions">
+                <button class="selection-submit" id="selection-submit">Send Answer</button>
+              </div>
+            </div>
+            <div class="approval-buttons" id="approval-buttons">
+              <button class="btn-approve" id="btn-approve">Approve</button>
+              <button class="btn-deny" id="btn-deny">Deny</button>
+              <span class="approval-timer" id="approval-timer" aria-live="polite">30s</span>
+            </div>
             <div class="status-signal-card">
               <div class="signal-card-header">
                 <div class="signal-card-label">Last hook</div>
@@ -136,19 +158,6 @@
             <div class="action-history" id="action-history">
               <div class="history-label">Recent:</div>
               <div class="history-list" id="history-list"></div>
-            </div>
-            <div class="selection-panel" id="selection-panel">
-              <div class="selection-label">Question</div>
-              <div class="selection-prompt" id="selection-prompt">Waiting for Claude prompt...</div>
-              <div class="selection-options" id="selection-options"></div>
-              <div class="selection-actions" id="selection-actions">
-                <button class="selection-submit" id="selection-submit">Send Answer</button>
-              </div>
-            </div>
-            <div class="approval-buttons" id="approval-buttons">
-              <button class="btn-approve" id="btn-approve">Approve</button>
-              <button class="btn-deny" id="btn-deny">Deny</button>
-              <span class="approval-timer" id="approval-timer" aria-live="polite">30s</span>
             </div>
           </div>
         </div>

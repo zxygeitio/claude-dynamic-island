@@ -10,6 +10,7 @@ import { isTauri } from "../utils/env";
 import {
   assessApprovalRisk,
   createHistorySummary,
+  describeToolIntent,
   formatDuration,
   formatPayloadForClipboard,
   formatRelativeTime,
@@ -82,6 +83,10 @@ export class StatusPanel {
   private readonly elPayloadToggle: HTMLButtonElement | null;
   private readonly elPayloadCopy: HTMLButtonElement | null;
   private readonly elPayloadView: HTMLElement | null;
+  private readonly elActionIntentLabel: HTMLElement | null;
+  private readonly elActionIntentDescription: HTMLElement | null;
+  private readonly elActionIntentNext: HTMLElement | null;
+  private readonly elActionIntentScope: HTMLElement | null;
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -118,6 +123,10 @@ export class StatusPanel {
     this.elPayloadToggle = document.getElementById("payload-toggle") as HTMLButtonElement | null;
     this.elPayloadCopy = document.getElementById("payload-copy") as HTMLButtonElement | null;
     this.elPayloadView = document.getElementById("payload-view");
+    this.elActionIntentLabel = document.getElementById("action-intent-label");
+    this.elActionIntentDescription = document.getElementById("action-intent-description");
+    this.elActionIntentNext = document.getElementById("action-intent-next");
+    this.elActionIntentScope = document.getElementById("action-intent-scope");
 
     this.initEventListeners();
     this.initApprovalButtons();
@@ -128,6 +137,7 @@ export class StatusPanel {
     this.updateConnectionState("Armed");
     this.updateCurrentNote("Ready for Claude hook events");
     this.updateLastHookEvent("Waiting for first hook");
+    this.updateActionIntent("Standing by", "Waiting for Claude hook events.", "Open Claude Code and run a tool to see live context.", "Workspace");
     this.renderPayloadView();
     this.renderOverview();
     this.renderHistory();
@@ -238,6 +248,8 @@ export class StatusPanel {
       const selection = this.parseSelection("", toolInput);
       this.updateCurrentNote(selection.questions[0]?.prompt || "Claude is waiting for your input");
     }
+
+    this.renderToolIntent(toolName, toolInput);
   }
 
   private updateToolIcon(toolName: string): void {
@@ -434,6 +446,8 @@ export class StatusPanel {
         this.addDetail(details, "Command", this.toDisplayValue(toolInput.command));
         this.addDetail(details, "Reason", this.toDisplayValue(toolInput.description));
         return { summary: "Run shell command", path: null, details };
+      case "AskUserQuestion":
+        return { summary: "Answer Claude's question", path: null, details: [] };
       case "Grep":
         this.addDetail(details, "Pattern", this.toDisplayValue(toolInput.pattern));
         this.addDetail(details, "Glob", this.toDisplayValue(toolInput.glob));
@@ -720,7 +734,9 @@ export class StatusPanel {
 
     if (optionsEl) {
       optionsEl.replaceChildren(
-        ...this.currentSelection.questions.map((question) => this.renderSelectionQuestion(question))
+        ...this.currentSelection.questions.map((question) =>
+          this.renderSelectionQuestion(question, this.currentSelection!.questions.length > 1)
+        )
       );
     }
 
@@ -736,7 +752,7 @@ export class StatusPanel {
     }
   }
 
-  private renderSelectionQuestion(question: SelectionQuestion): HTMLElement {
+  private renderSelectionQuestion(question: SelectionQuestion, showPrompt: boolean): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "selection-question";
 
@@ -767,7 +783,11 @@ export class StatusPanel {
       choices.appendChild(button);
     }
 
-    wrapper.append(header, text, choices);
+    wrapper.append(header);
+    if (showPrompt) {
+      wrapper.append(text);
+    }
+    wrapper.append(choices);
     return wrapper;
   }
 
@@ -909,6 +929,31 @@ export class StatusPanel {
       this.payloadVisible = !this.payloadVisible;
       this.renderPayloadView();
     });
+  }
+
+  private renderToolIntent(toolName: string, toolInput: Record<string, unknown>): void {
+    const intent = describeToolIntent(toolName, toolInput);
+    this.updateActionIntent(intent.label, intent.description, intent.nextAction, intent.scope);
+  }
+
+  private updateActionIntent(
+    label: string,
+    description: string,
+    nextAction: string,
+    scope: string
+  ): void {
+    if (this.elActionIntentLabel) {
+      this.elActionIntentLabel.textContent = label;
+    }
+    if (this.elActionIntentDescription) {
+      this.elActionIntentDescription.textContent = description;
+    }
+    if (this.elActionIntentNext) {
+      this.elActionIntentNext.textContent = nextAction;
+    }
+    if (this.elActionIntentScope) {
+      this.elActionIntentScope.textContent = scope;
+    }
   }
 
   private initPayloadCopy(): void {
